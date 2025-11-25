@@ -1,5 +1,12 @@
 Welcome to your new TanStack app! 
 
+# Features
+
+This application includes:
+- 📊 **CI Dashboard** - Real-time CI/CD pipeline monitoring
+- 📅 **Machine Booking** - Interactive calendar for server resource scheduling
+- 🚀 **TanStack Start** demos and examples
+
 # Getting Started
 
 To run this application:
@@ -8,6 +15,10 @@ To run this application:
 pnpm install
 pnpm dev
 ```
+
+Then visit:
+- http://localhost:3000/ci - CI Dashboard
+- http://localhost:3000/booking - Machine Booking System
 
 # Building For Production
 
