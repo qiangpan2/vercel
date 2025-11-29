@@ -1,0 +1,34 @@
+---
+# 撤销用户访问权限
+# 使用方式: ansible-playbook revoke_access.yml -e "target_machine=cse-ai-1 sso_username=zhangsan access_group=machine-access-cse-ai-1"
+
+- name: Revoke SSO user access from machine
+  hosts: "{{ target_machine }}"
+  become: yes
+  vars:
+    sso_username: "{{ sso_username }}"
+    access_group: "{{ access_group }}"
+    
+  tasks:
+    - name: Remove user from access group
+      command: >
+        gpasswd -d {{ sso_username }} {{ access_group }}
+      register: result
+      failed_when: false
+      changed_when: result.rc == 0
+      
+    - name: Verify user was removed
+      command: groups {{ sso_username }}
+      register: user_groups
+      changed_when: false
+      failed_when: false
+      
+    - name: Display user groups
+      debug:
+        msg: "User {{ sso_username }} groups: {{ user_groups.stdout }}"
+      when: user_groups.rc == 0
+        
+    - name: Log access revocation
+      debug:
+        msg: "🔒 Access revoked for {{ sso_username }} on {{ target_machine }} from group {{ access_group }}"
+

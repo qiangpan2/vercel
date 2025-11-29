@@ -1,0 +1,109 @@
+{
+  "$schema": "./machines.schema.json",
+  "version": "1.0",
+  "lastUpdated": "2025-11-29",
+  "description": "机器配置文件 - 单一数据源",
+  "machines": [
+    {
+      "id": "cse-ai-1",
+      "name": "cse-ai-1",
+      "description": "GPU Server",
+      "status": "available",
+      "specs": {
+        "gpu": "NVIDIA A100 80GB x8",
+        "cpu": "AMD EPYC 7763 64-Core",
+        "ram": "1TB DDR4",
+        "storage": "4TB NVMe SSD",
+        "network": "100Gbps InfiniBand"
+      },
+      "maxSharedUsers": 3,
+      "ansible": {
+        "host": "192.168.1.101",
+        "user": "admin",
+        "ssh_key": "~/.ssh/admin_key"
+      },
+      "ipmi": {
+        "host": "192.168.1.201",
+        "user": "ADMIN",
+        "password": "changeme"
+      },
+      "access_group": "machine-access-cse-ai-1"
+    },
+    {
+      "id": "cse-ai-2",
+      "name": "cse-ai-2",
+      "description": "GPU Server",
+      "status": "available",
+      "specs": {
+        "gpu": "NVIDIA A100 80GB x8",
+        "cpu": "AMD EPYC 7763 64-Core",
+        "ram": "1TB DDR4",
+        "storage": "4TB NVMe SSD",
+        "network": "100Gbps InfiniBand"
+      },
+      "maxSharedUsers": 3,
+      "ansible": {
+        "host": "192.168.1.102",
+        "user": "admin",
+        "ssh_key": "~/.ssh/admin_key"
+      },
+      "ipmi": {
+        "host": "192.168.1.202",
+        "user": "ADMIN",
+        "password": "changeme"
+      },
+      "access_group": "machine-access-cse-ai-2"
+    },
+    {
+      "id": "cse-ai-3",
+      "name": "cse-ai-3",
+      "description": "High-Memory Server",
+      "status": "available",
+      "specs": {
+        "gpu": "NVIDIA H100 80GB x4",
+        "cpu": "Intel Xeon Platinum 8480+ 56-Core",
+        "ram": "2TB DDR5",
+        "storage": "8TB NVMe SSD",
+        "network": "200Gbps InfiniBand"
+      },
+      "maxSharedUsers": 5,
+      "ansible": {
+        "host": "192.168.1.103",
+        "user": "admin",
+        "ssh_key": "~/.ssh/admin_key"
+      },
+      "ipmi": {
+        "host": "192.168.1.203",
+        "user": "ADMIN",
+        "password": "changeme"
+      },
+      "access_group": "machine-access-cse-ai-3"
+    },
+    {
+      "id": "cse-ai-4",
+      "name": "cse-ai-4",
+      "description": "CPU Compute Server",
+      "status": "available",
+      "specs": {
+        "gpu": "None",
+        "cpu": "AMD EPYC 9654 96-Core x2",
+        "ram": "1.5TB DDR5",
+        "storage": "10TB NVMe SSD",
+        "network": "100Gbps InfiniBand"
+      },
+      "maxSharedUsers": 8,
+      "ansible": {
+        "host": "192.168.1.104",
+        "user": "admin",
+        "ssh_key": "~/.ssh/admin_key"
+      },
+      "ipmi": {
+        "host": "192.168.1.204",
+        "user": "ADMIN",
+        "password": "changeme"
+      },
+      "access_group": "machine-access-cse-ai-4"
+    }
+  ]
+}
+

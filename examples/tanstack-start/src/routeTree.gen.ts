@@ -17,6 +17,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
 import { Route as DemoStartApiRequestRouteImport } from './routes/demo/start.api-request'
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
+import { Route as ApiMachinesListRouteImport } from './routes/api/machines/list'
+import { Route as ApiBookingsListRouteImport } from './routes/api/bookings/list'
+import { Route as ApiBookingsCreateRouteImport } from './routes/api/bookings/create'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as DemoStartSsrIndexRouteImport } from './routes/demo/start.ssr.index'
 import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr.spa-mode'
 import { Route as DemoStartSsrFullSsrRouteImport } from './routes/demo/start.ssr.full-ssr'
@@ -62,6 +66,26 @@ const DemoApiNamesRoute = DemoApiNamesRouteImport.update({
   path: '/demo/api/names',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMachinesListRoute = ApiMachinesListRouteImport.update({
+  id: '/api/machines/list',
+  path: '/api/machines/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBookingsListRoute = ApiBookingsListRouteImport.update({
+  id: '/api/bookings/list',
+  path: '/api/bookings/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBookingsCreateRoute = ApiBookingsCreateRouteImport.update({
+  id: '/api/bookings/create',
+  path: '/api/bookings/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoStartSsrIndexRoute = DemoStartSsrIndexRouteImport.update({
   id: '/demo/start/ssr/',
   path: '/demo/start/ssr/',
@@ -89,6 +113,10 @@ export interface FileRoutesByFullPath {
   '/ci': typeof CiRoute
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/bookings/create': typeof ApiBookingsCreateRoute
+  '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/machines/list': typeof ApiMachinesListRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -103,6 +131,10 @@ export interface FileRoutesByTo {
   '/ci': typeof CiRoute
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/bookings/create': typeof ApiBookingsCreateRoute
+  '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/machines/list': typeof ApiMachinesListRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -118,6 +150,10 @@ export interface FileRoutesById {
   '/ci': typeof CiRoute
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/bookings/create': typeof ApiBookingsCreateRoute
+  '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/machines/list': typeof ApiMachinesListRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -134,6 +170,10 @@ export interface FileRouteTypes {
     | '/ci'
     | '/help'
     | '/login'
+    | '/api/auth/login'
+    | '/api/bookings/create'
+    | '/api/bookings/list'
+    | '/api/machines/list'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -148,6 +188,10 @@ export interface FileRouteTypes {
     | '/ci'
     | '/help'
     | '/login'
+    | '/api/auth/login'
+    | '/api/bookings/create'
+    | '/api/bookings/list'
+    | '/api/machines/list'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -162,6 +206,10 @@ export interface FileRouteTypes {
     | '/ci'
     | '/help'
     | '/login'
+    | '/api/auth/login'
+    | '/api/bookings/create'
+    | '/api/bookings/list'
+    | '/api/machines/list'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -177,6 +225,10 @@ export interface RootRouteChildren {
   CiRoute: typeof CiRoute
   HelpRoute: typeof HelpRoute
   LoginRoute: typeof LoginRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiBookingsCreateRoute: typeof ApiBookingsCreateRoute
+  ApiBookingsListRoute: typeof ApiBookingsListRoute
+  ApiMachinesListRoute: typeof ApiMachinesListRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
@@ -244,6 +296,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoApiNamesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/machines/list': {
+      id: '/api/machines/list'
+      path: '/api/machines/list'
+      fullPath: '/api/machines/list'
+      preLoaderRoute: typeof ApiMachinesListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bookings/list': {
+      id: '/api/bookings/list'
+      path: '/api/bookings/list'
+      fullPath: '/api/bookings/list'
+      preLoaderRoute: typeof ApiBookingsListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bookings/create': {
+      id: '/api/bookings/create'
+      path: '/api/bookings/create'
+      fullPath: '/api/bookings/create'
+      preLoaderRoute: typeof ApiBookingsCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/start/ssr/': {
       id: '/demo/start/ssr/'
       path: '/demo/start/ssr'
@@ -281,6 +361,10 @@ const rootRouteChildren: RootRouteChildren = {
   CiRoute: CiRoute,
   HelpRoute: HelpRoute,
   LoginRoute: LoginRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiBookingsCreateRoute: ApiBookingsCreateRoute,
+  ApiBookingsListRoute: ApiBookingsListRoute,
+  ApiMachinesListRoute: ApiMachinesListRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,

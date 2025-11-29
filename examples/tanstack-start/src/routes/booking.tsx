@@ -22,95 +22,32 @@ export const Route = createFileRoute('/booking')({
     }
   },
   loader: async () => {
-    // 在实际应用中，这里会从数据库获取机器列表和预订数据
-    const machines = [
-      {
-        id: '1',
-        name: 'cse-ai-1',
-        description: 'GPU Server',
-        status: 'available',
-        intro: '8x A100 GPU | 64-Core CPU | 1TB RAM',
-        specs: {
-          gpu: 'NVIDIA A100 80GB x8',
-          cpu: 'AMD EPYC 7763 64-Core',
-          ram: '1TB DDR4',
-          storage: '4TB NVMe SSD',
-          network: '100Gbps InfiniBand'
-        }
-      },
-      {
-        id: '2',
-        name: 'cse-ai-2',
-        description: 'GPU Server',
-        status: 'available',
-        intro: '8x A100 GPU | 64-Core CPU | 1TB RAM',
-        specs: {
-          gpu: 'NVIDIA A100 80GB x8',
-          cpu: 'AMD EPYC 7763 64-Core',
-          ram: '1TB DDR4',
-          storage: '4TB NVMe SSD',
-          network: '100Gbps InfiniBand'
-        }
-      },
-      {
-        id: '3',
-        name: 'cse-ai-3',
-        description: 'High-Memory Server',
-        status: 'available',
-        intro: '4x H100 GPU | 56-Core CPU | 2TB RAM',
-        specs: {
-          gpu: 'NVIDIA H100 80GB x4',
-          cpu: 'Intel Xeon Platinum 8480+ 56-Core',
-          ram: '2TB DDR5',
-          storage: '8TB NVMe SSD',
-          network: '200Gbps InfiniBand'
-        }
-      },
-      {
-        id: '4',
-        name: 'cse-ai-4',
-        description: 'CPU Compute Server',
-        status: 'available',
-        intro: '192 Cores | 1.5TB RAM | No GPU',
-        specs: {
-          gpu: 'None',
-          cpu: 'AMD EPYC 9654 96-Core x2',
-          ram: '1.5TB DDR5',
-          storage: '10TB NVMe SSD',
-          network: '100Gbps InfiniBand'
-        }
-      }
-    ]
-
-    // 模拟现有预订数据
-    const bookings = [
-      {
-        id: '1',
-        machineId: '1',
-        userId: 'user1',
-        userName: 'John Doe',
-        startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).setHours(9, 0, 0, 0),
-        endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).setHours(17, 0, 0, 0),
-      },
-      {
-        id: '2',
-        machineId: '2',
-        userId: 'user2',
-        userName: 'Jane Smith',
-        startTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).setHours(10, 0, 0, 0),
-        endTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).setHours(16, 0, 0, 0),
-      },
-      {
-        id: '3',
-        machineId: '1',
-        userId: 'user3',
-        userName: 'Alice Johnson',
-        startTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).setHours(13, 0, 0, 0),
-        endTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).setHours(18, 0, 0, 0),
-      }
-    ]
-
-    return { machines, bookings }
+    try {
+      // 从 API 获取机器列表
+      const machinesResponse = await fetch('/api/machines/list')
+      const machinesData = await machinesResponse.json()
+      
+      // 转换机器数据格式
+      const machines = (machinesData.machines || []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        description: m.description,
+        status: m.status,
+        intro: m.intro,
+        specs: m.specs,
+        maxSharedUsers: m.maxSharedUsers
+      }))
+      
+      console.log('[Booking] Loaded machines:', machines.length)
+      
+      // 注意：预订数据将在客户端通过 useEffect 获取
+      // 因为 loader 在服务端运行，无法访问 localStorage
+      return { machines, bookings: [] }
+    } catch (error) {
+      console.error('[Booking] Failed to load data:', error)
+      // 如果 API 失败，返回空数据
+      return { machines: [], bookings: [] }
+    }
   }
 })
 
@@ -127,6 +64,7 @@ interface Machine {
     storage: string
     network: string
   }
+  maxSharedUsers?: number
 }
 
 interface Booking {
@@ -147,13 +85,47 @@ function BookingPage() {
   const [showMachineDetails, setShowMachineDetails] = useState(false)
   const [detailMachine, setDetailMachine] = useState<Machine | null>(null)
   const [showAdminPanel, setShowAdminPanel] = useState(false)
-  const [editingMachineId, setEditingMachineId] = useState<string | null>(null)
-  const [editingIntro, setEditingIntro] = useState('')
 
   useEffect(() => {
     const currentUser = getCurrentUser()
     setUser(currentUser)
   }, [])
+
+  // 获取用户的预订（必须在客户端，因为需要 localStorage）
+  useEffect(() => {
+    const fetchBookings = async () => {
+      const currentUser = getCurrentUser()
+      if (!currentUser) {
+        console.log('[Booking] No user logged in, skipping booking fetch')
+        setLocalBookings([])
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/bookings/list?username=${currentUser.username}`)
+        const data = await response.json()
+        
+        if (data.success && data.bookings) {
+          const formattedBookings = data.bookings.map((b: any) => ({
+            id: b.id,
+            machineId: b.machineId,
+            userId: b.ssoUsername,
+            userName: b.displayName,
+            startTime: b.startTime,
+            endTime: b.endTime,
+          }))
+          
+          setLocalBookings(formattedBookings)
+          console.log('[Booking] Loaded bookings for user:', currentUser.username, formattedBookings.length)
+        }
+      } catch (error) {
+        console.error('[Booking] Failed to fetch bookings:', error)
+        setLocalBookings([])
+      }
+    }
+
+    fetchBookings()
+  }, [user])
 
   const handleBooking = (machineId: string, startTime: Date, endTime: Date) => {
     if (!user) return
@@ -190,28 +162,32 @@ function BookingPage() {
     }))
   }
 
-  const handleEditMachineIntro = (machineId: string, currentIntro: string) => {
-    setEditingMachineId(machineId)
-    setEditingIntro(currentIntro || '')
-  }
-
-  const handleSaveMachineIntro = (machineId: string) => {
-    if (!isAdmin(user)) return
+  const handleIPMIControl = async (machineId: string, action: 'power-on' | 'power-off' | 'reboot') => {
+    if (!isAdmin(user)) {
+      console.warn('Only administrators can control IPMI')
+      return
+    }
     
-    setMachines(machines.map(m => {
-      if (m.id === machineId) {
-        console.log(`Machine ${m.name} intro updated to: ${editingIntro}`)
-        return { ...m, intro: editingIntro }
-      }
-      return m
-    }))
-    setEditingMachineId(null)
-    setEditingIntro('')
-  }
-
-  const handleCancelEdit = () => {
-    setEditingMachineId(null)
-    setEditingIntro('')
+    const machine = machines.find(m => m.id === machineId)
+    if (!machine) return
+    
+    console.log(`[IPMI] ${action} requested for ${machine.name}`)
+    
+    // TODO: 调用 IPMI API
+    // const response = await fetch(`/api/ipmi/${action}`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ machineId })
+    // })
+    
+    // 临时提示
+    const actionText = {
+      'power-on': '开机',
+      'power-off': '关机',
+      'reboot': '重启'
+    }[action]
+    
+    alert(`IPMI ${actionText}命令已发送到 ${machine.name}\n\n注意：这是演示版本，实际功能需要配置 IPMI API`)
   }
 
   const getStatusBadgeColor = (status: string) => {
@@ -393,47 +369,34 @@ function BookingPage() {
                         </button>
                       </div>
                       
+                      {/* IPMI 控制按钮 */}
                       <div className="border-t border-gray-600 pt-3">
                         <label className="block text-xs font-medium text-gray-400 mb-2">
-                          Machine Introduction
+                          IPMI Control
                         </label>
-                        {editingMachineId === machine.id ? (
-                          <div className="space-y-2">
-                            <input
-                              type="text"
-                              value={editingIntro}
-                              onChange={(e) => setEditingIntro(e.target.value)}
-                              className="w-full bg-gray-600 text-white text-sm rounded-lg px-3 py-2 border border-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                              placeholder="e.g., 8x A100 GPU | 64-Core CPU | 1TB RAM"
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleSaveMachineIntro(machine.id)}
-                                className="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-sm rounded-lg transition-colors"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={handleCancelEdit}
-                                className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded-lg transition-colors"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm text-gray-300">
-                              {machine.intro || 'No introduction set'}
-                            </p>
-                            <button
-                              onClick={() => handleEditMachineIntro(machine.id, machine.intro || '')}
-                              className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded-lg transition-colors"
-                            >
-                              Edit
-                            </button>
-                          </div>
-                        )}
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            onClick={() => handleIPMIControl(machine.id, 'power-on')}
+                            className="flex items-center justify-center gap-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
+                          >
+                            <Power size={14} />
+                            <span>Power On</span>
+                          </button>
+                          <button
+                            onClick={() => handleIPMIControl(machine.id, 'power-off')}
+                            className="flex items-center justify-center gap-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
+                          >
+                            <PowerOff size={14} />
+                            <span>Power Off</span>
+                          </button>
+                          <button
+                            onClick={() => handleIPMIControl(machine.id, 'reboot')}
+                            className="flex items-center justify-center gap-1 px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs rounded-lg transition-colors"
+                          >
+                            <Settings size={14} className="animate-spin-slow" />
+                            <span>Reboot</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -546,17 +509,31 @@ function BookingPage() {
               </div>
 
               <div>
-                <h4 className="text-sm font-semibold text-gray-400 mb-3 uppercase">Status</h4>
-                <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 rounded-full border text-sm ${getStatusBadgeColor(detailMachine.status)}`}>
-                    {detailMachine.status}
-                  </span>
-                  {detailMachine.status === 'available' && (
-                    <span className="text-sm text-gray-400">Ready for booking</span>
-                  )}
-                  {detailMachine.status === 'maintenance' && (
-                    <span className="text-sm text-gray-400">Under maintenance</span>
-                  )}
+                <h4 className="text-sm font-semibold text-gray-400 mb-3 uppercase">Machine Info</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-700/30 rounded-lg p-4">
+                    <div className="text-xs text-gray-400 mb-1">Status</div>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded-full border text-xs ${getStatusBadgeColor(detailMachine.status)}`}>
+                        {detailMachine.status}
+                      </span>
+                      {detailMachine.status === 'available' && (
+                        <span className="text-xs text-gray-400">Ready</span>
+                      )}
+                      {detailMachine.status === 'maintenance' && (
+                        <span className="text-xs text-gray-400">Maintenance</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-gray-700/30 rounded-lg p-4">
+                    <div className="text-xs text-gray-400 mb-1">Max Shared Users</div>
+                    <div className="text-white font-medium">
+                      {detailMachine.maxSharedUsers || 1} user{(detailMachine.maxSharedUsers || 1) > 1 ? 's' : ''}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {detailMachine.maxSharedUsers === 1 ? 'Exclusive only' : 'Supports shared mode'}
+                    </div>
+                  </div>
                 </div>
               </div>
 

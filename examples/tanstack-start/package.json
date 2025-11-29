@@ -6,7 +6,11 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "serve": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "worker:perm": "tsx src/workers/permission-worker.ts",
+    "seed:machines": "tsx scripts/seed-machines.ts",
+    "generate:ansible": "tsx scripts/generate-ansible-hosts.ts",
+    "setup:all": "pnpm generate:ansible && pnpm seed:machines"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.6",
@@ -17,7 +21,9 @@
     "@tanstack/react-start": "^1.139.3",
     "@tanstack/react-table": "8.21.3",
     "@tanstack/router-plugin": "^1.132.0",
+    "bullmq": "5.65.0",
     "date-fns": "^2.30.0",
+    "ioredis": "5.6.1",
     "lucide-react": "^0.544.0",
     "nitro": "3.0.1-alpha.0",
     "react": "^19.2.0",
@@ -35,6 +41,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
     "jsdom": "^27.0.0",
+    "tsx": "4.19.2",
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
     "vitest": "^3.0.5",

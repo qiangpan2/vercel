@@ -1,0 +1,37 @@
+---
+# 授予用户访问权限
+# 使用方式: ansible-playbook grant_access.yml -e "target_machine=cse-ai-1 sso_username=zhangsan access_group=machine-access-cse-ai-1"
+
+- name: Grant SSO user access to machine
+  hosts: "{{ target_machine }}"
+  become: yes
+  vars:
+    sso_username: "{{ sso_username }}"
+    access_group: "{{ access_group }}"
+    
+  tasks:
+    - name: Ensure access group exists
+      group:
+        name: "{{ access_group }}"
+        state: present
+        
+    - name: Add user to access group
+      command: >
+        usermod -a -G {{ access_group }} {{ sso_username }}
+      register: result
+      changed_when: result.rc == 0
+      failed_when: result.rc != 0 and 'does not exist' not in result.stderr
+      
+    - name: Verify user was added to group
+      command: groups {{ sso_username }}
+      register: user_groups
+      changed_when: false
+      
+    - name: Display user groups
+      debug:
+        msg: "User {{ sso_username }} is now in groups: {{ user_groups.stdout }}"
+        
+    - name: Log access grant
+      debug:
+        msg: "✅ Access granted to {{ sso_username }} on {{ target_machine }} via group {{ access_group }}"
+
