@@ -1,11 +1,7 @@
-/**
- * 登录 API 路由
- * 处理用户登录请求，调用 Python SSO 验证程序
- */
-
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
 import { login } from '../../../lib/auth/middleware'
+import { createSession } from '../../../lib/auth/session'
 
 export const Route = createFileRoute('/api/auth/login')({
   server: {
@@ -13,42 +9,40 @@ export const Route = createFileRoute('/api/auth/login')({
       POST: async ({ request }) => {
         try {
           const body = await request.json()
-          const { username, password } = body
+          const { ntid, password } = body
           
-          if (!username || !password) {
+          if (!ntid || !password) {
             return json({
               success: false,
-              error: 'Username and password are required'
+              error: 'NTID and password are required'
             }, { status: 400 })
           }
           
-          // 调用 Python SSO 验证
-          const user = await login(username, password)
+          // LDAP 认证
+          const user = await login(ntid, password)
           
-          // 注意：这里简化了会话管理
-          // 实际生产环境应该创建会话并设置 Cookie/JWT
-          // const session = await createSession(user)
+          // 创建会话
+          const sessionId = createSession(ntid)
           
           return json({
             success: true,
             user: {
-              username: user.username,
+              ntid: user.ntid,
               displayName: user.displayName,
               email: user.email,
               role: user.role
             }
           }, {
-            status: 200
-            // 生产环境应该设置 Cookie:
-            // headers: {
-            //   'Set-Cookie': session.cookie
-            // }
+            status: 200,
+            headers: {
+              'Set-Cookie': `rapid_session=${sessionId}; HttpOnly; Path=/; Max-Age=${8 * 60 * 60}; SameSite=Lax`
+            }
           })
         } catch (error) {
           console.error('[Login API] Error:', error)
           return json({
             success: false,
-            error: error instanceof Error ? error.message : 'Invalid username or password'
+            error: error instanceof Error ? error.message : 'Invalid NTID or password'
           }, { status: 401 })
         }
       }

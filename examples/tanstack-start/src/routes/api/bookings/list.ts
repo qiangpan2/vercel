@@ -1,46 +1,70 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
-import { bookingDB } from '~/lib/db/redis'
+import db from '../../../lib/db/booking'
 
-/**
- * GET /api/bookings/list
- * 获取预订列表
- * 
- * TODO: 实现真实的服务器端会话管理
- * 当前为演示版本，返回所有预订（生产环境需改为只返回当前用户的预订）
- */
+// GET /api/bookings/list
 export const Route = createFileRoute('/api/bookings/list')({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        // TODO: 在生产环境中，应该从会话/Cookie/JWT 中获取用户
-        // const user = await getCurrentUser(request)
-        // if (!user) {
-        //   return json({ error: 'Please login first' }, { status: 401 })
-        // }
-        
         try {
-          // 临时方案：返回所有预订（生产环境应该只返回当前用户的预订）
-          // const bookings = await bookingDB.getByUser(user.username)
           const url = new URL(request.url)
           const username = url.searchParams.get('username')
+          const serverId = url.searchParams.get('serverId') || url.searchParams.get('machineId')
           
-          let bookings
-          if (username) {
-            bookings = await bookingDB.getByUser(username)
-          } else {
-            // 返回所有预订（仅用于开发/演示）
-            bookings = await bookingDB.getAll()
+          console.log('[API] Fetching bookings, username:', username, 'serverId:', serverId)
+          
+          let query = `
+            SELECT 
+              b.id,
+              b.server_id,
+              b.ntid,
+              b.book_reason,
+              b.start_time,
+              b.end_time,
+              b.is_exclusive,
+              b.status,
+              u.display_name
+            FROM bookings b
+            LEFT JOIN users u ON b.ntid = u.ntid
+            WHERE b.status = 'active'
+          `
+          const params: any[] = []
+          
+          if (serverId) {
+            query += ' AND b.server_id = ?'
+            params.push(serverId)
           }
+          
+          // 获取所有活跃预订（不只是当前用户的）
+          query += ' ORDER BY b.start_time'
+          
+          const bookings = db.prepare(query).all(...params) as any[]
+          
+          // 转换为前端格式
+          const formattedBookings = bookings.map(b => ({
+            id: String(b.id),
+            machineId: String(b.server_id),  // 前端用 machineId
+            userId: b.ntid,
+            userName: b.display_name || b.ntid,
+            startTime: b.start_time,
+            endTime: b.end_time,
+            isExclusive: b.is_exclusive === 1,
+            reason: b.book_reason
+          }))
+          
+          console.log('[API] Found bookings:', formattedBookings.length)
           
           return json({
             success: true,
-            bookings
+            bookings: formattedBookings
           })
         } catch (error) {
           console.error('[API] List bookings error:', error)
           return json({ 
-            error: 'Failed to fetch bookings' 
+            success: false,
+            error: 'Failed to fetch bookings',
+            bookings: []
           }, { status: 500 })
         }
       }

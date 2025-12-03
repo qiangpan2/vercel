@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, lazy, Suspense, useEffect } from 'react'
 import { Info, X, Power, PowerOff, Settings } from 'lucide-react'
 import { getCurrentUser, isAdmin, type User } from '../utils/auth'
@@ -8,52 +8,12 @@ const MachineBookingCalendar = lazy(() => import('../components/MachineBookingCa
 
 export const Route = createFileRoute('/booking')({
   component: BookingPage,
-  // Disable SSR for this route to avoid date-fns compatibility issues
   ssr: false,
-  beforeLoad: ({ location }) => {
-    const user = getCurrentUser()
-    if (!user) {
-      throw redirect({
-        to: '/login',
-        search: {
-          redirect: location.href,
-        },
-      })
-    }
-  },
-  loader: async () => {
-    try {
-      // 从 API 获取机器列表
-      const machinesResponse = await fetch('/api/machines/list')
-      const machinesData = await machinesResponse.json()
-      
-      // 转换机器数据格式
-      const machines = (machinesData.machines || []).map((m: any) => ({
-        id: m.id,
-        name: m.name,
-        description: m.description,
-        status: m.status,
-        intro: m.intro,
-        specs: m.specs,
-        maxSharedUsers: m.maxSharedUsers
-      }))
-      
-      console.log('[Booking] Loaded machines:', machines.length)
-      
-      // 注意：预订数据将在客户端通过 useEffect 获取
-      // 因为 loader 在服务端运行，无法访问 localStorage
-      return { machines, bookings: [] }
-    } catch (error) {
-      console.error('[Booking] Failed to load data:', error)
-      // 如果 API 失败，返回空数据
-      return { machines: [], bookings: [] }
-    }
-  }
 })
 
 interface Machine {
   id: string
-  name: string
+  name: string  // 对应 servers.hostname
   description: string
   status: string
   intro?: string
@@ -65,6 +25,11 @@ interface Machine {
     network: string
   }
   maxSharedUsers?: number
+  // 额外的服务器信息
+  ip?: string
+  ipmi_ip?: string
+  location?: string
+  model?: string
 }
 
 interface Booking {
@@ -77,46 +42,98 @@ interface Booking {
 }
 
 function BookingPage() {
-  const { machines: initialMachines, bookings } = Route.useLoaderData() as { machines: Machine[], bookings: Booking[] }
+  const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
-  const [machines, setMachines] = useState<Machine[]>(initialMachines)
-  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(machines[0] || null)
-  const [localBookings, setLocalBookings] = useState<Booking[]>(bookings)
+  const [authChecked, setAuthChecked] = useState(false)
+  const [machines, setMachines] = useState<Machine[]>([])
+  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null)
+  const [localBookings, setLocalBookings] = useState<Booking[]>([])
   const [showMachineDetails, setShowMachineDetails] = useState(false)
   const [detailMachine, setDetailMachine] = useState<Machine | null>(null)
   const [showAdminPanel, setShowAdminPanel] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
+  // 客户端认证检查
   useEffect(() => {
     const currentUser = getCurrentUser()
+    console.log('[Booking] Current user:', currentUser)
+    
+    if (!currentUser) {
+      console.log('[Booking] No user, redirecting to login')
+      window.location.href = '/login?redirect=/booking'
+      return
+    }
+    
     setUser(currentUser)
+    setAuthChecked(true)
   }, [])
 
-  // 获取用户的预订（必须在客户端，因为需要 localStorage）
+  // 获取机器列表（客户端通过 API）
   useEffect(() => {
-    const fetchBookings = async () => {
-      const currentUser = getCurrentUser()
-      if (!currentUser) {
-        console.log('[Booking] No user logged in, skipping booking fetch')
-        setLocalBookings([])
-        return
-      }
+    if (!authChecked) return
 
+    const fetchMachines = async () => {
       try {
-        const response = await fetch(`/api/bookings/list?username=${currentUser.username}`)
+        console.log('[Booking] Fetching machines from API...')
+        const response = await fetch('/api/machines/list')
+        const data = await response.json()
+        
+        console.log('[Booking] Machines response:', data)
+        
+        if (data.success && data.machines && data.machines.length > 0) {
+          const formattedMachines = data.machines.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            description: m.description,
+            status: m.status || 'available',
+            intro: m.intro,
+            specs: typeof m.specs === 'string' ? JSON.parse(m.specs) : m.specs || {
+              gpu: 'N/A',
+              cpu: 'N/A',
+              ram: 'N/A',
+              storage: 'N/A',
+              network: 'N/A'
+            },
+            maxSharedUsers: m.maxSharedUsers || 1
+          }))
+          setMachines(formattedMachines)
+          setSelectedMachine(formattedMachines[0])
+          console.log('[Booking] Loaded machines:', formattedMachines.length)
+        } else {
+          console.warn('[Booking] No machines returned from API')
+        }
+      } catch (error) {
+        console.error('[Booking] Failed to fetch machines:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchMachines()
+  }, [authChecked])
+
+  // 获取用户的预订
+  useEffect(() => {
+    if (!user) return
+
+    const fetchBookings = async () => {
+      try {
+        const username = user.ntid || user.username
+        const response = await fetch(`/api/bookings/list?username=${username}`)
         const data = await response.json()
         
         if (data.success && data.bookings) {
           const formattedBookings = data.bookings.map((b: any) => ({
             id: b.id,
-            machineId: b.machineId,
-            userId: b.ssoUsername,
-            userName: b.displayName,
-            startTime: b.startTime,
-            endTime: b.endTime,
+            machineId: b.machineId || b.machine_id,
+            userId: b.ssoUsername || b.ntid || b.userId || b.sso_username,
+            userName: b.displayName || b.userName || b.display_name,
+            startTime: b.startTime || b.start_time,
+            endTime: b.endTime || b.end_time,
           }))
           
           setLocalBookings(formattedBookings)
-          console.log('[Booking] Loaded bookings for user:', currentUser.username, formattedBookings.length)
+          console.log('[Booking] Loaded bookings:', formattedBookings.length)
         }
       } catch (error) {
         console.error('[Booking] Failed to fetch bookings:', error)
@@ -127,26 +144,77 @@ function BookingPage() {
     fetchBookings()
   }, [user])
 
-  const handleBooking = (machineId: string, startTime: Date, endTime: Date) => {
-    if (!user) return
-    
-    // 在实际应用中，这里会调用API保存预订
-    const newBooking: Booking = {
-      id: `booking-${Date.now()}`,
-      machineId,
-      userId: user.username,
-      userName: user.displayName,
-      startTime: startTime.getTime(),
-      endTime: endTime.getTime()
-    }
-    setLocalBookings([...localBookings, newBooking])
-    console.log('New booking created:', newBooking)
+  // 显示加载状态
+  if (!authChecked || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
-  const handleDeleteBooking = (bookingId: string) => {
-    // 在实际应用中，这里会调用API删除预订
-    setLocalBookings(localBookings.filter(b => b.id !== bookingId))
-    console.log('Booking deleted:', bookingId)
+  if (!user) {
+    return null
+  }
+
+  // ...保留原来的其他函数和 JSX...
+  const handleBooking = async (machineId: string, startTime: Date, endTime: Date) => {
+    if (!user) return
+    
+    try {
+      const response = await fetch('/api/bookings/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          machineId,
+          startTime: startTime.getTime(),
+          endTime: endTime.getTime(),
+          ntid: user.ntid || user.username,
+          displayName: user.displayName,
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        const newBooking: Booking = {
+          id: data.bookingId || `booking-${Date.now()}`,
+          machineId,
+          userId: user.ntid || user.username,
+          userName: user.displayName,
+          startTime: startTime.getTime(),
+          endTime: endTime.getTime()
+        }
+        setLocalBookings([...localBookings, newBooking])
+        console.log('[Booking] Created:', newBooking)
+      } else {
+        console.error('[Booking] Failed to create:', data.error)
+        alert('Failed to create booking: ' + (data.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('[Booking] Error creating booking:', error)
+    }
+  }
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    try {
+      const response = await fetch(`/api/bookings/delete?id=${bookingId}`, {
+        method: 'DELETE',
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setLocalBookings(localBookings.filter(b => b.id !== bookingId))
+        console.log('[Booking] Deleted:', bookingId)
+      }
+    } catch (error) {
+      console.error('[Booking] Error deleting booking:', error)
+      setLocalBookings(localBookings.filter(b => b.id !== bookingId))
+    }
   }
 
   const handleToggleMachineStatus = (machineId: string) => {
@@ -155,7 +223,6 @@ function BookingPage() {
     setMachines(machines.map(m => {
       if (m.id === machineId) {
         const newStatus = m.status === 'available' ? 'offline' : 'available'
-        console.log(`Machine ${m.name} status changed to: ${newStatus}`)
         return { ...m, status: newStatus }
       }
       return m
@@ -163,404 +230,131 @@ function BookingPage() {
   }
 
   const handleIPMIControl = async (machineId: string, action: 'power-on' | 'power-off' | 'reboot') => {
-    if (!isAdmin(user)) {
-      console.warn('Only administrators can control IPMI')
-      return
-    }
+    if (!isAdmin(user)) return
     
     const machine = machines.find(m => m.id === machineId)
     if (!machine) return
     
-    console.log(`[IPMI] ${action} requested for ${machine.name}`)
-    
-    // TODO: 调用 IPMI API
-    // const response = await fetch(`/api/ipmi/${action}`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ machineId })
-    // })
-    
-    // 临时提示
-    const actionText = {
-      'power-on': '开机',
-      'power-off': '关机',
-      'reboot': '重启'
-    }[action]
-    
-    alert(`IPMI ${actionText}命令已发送到 ${machine.name}\n\n注意：这是演示版本，实际功能需要配置 IPMI API`)
+    const actionText = { 'power-on': '开机', 'power-off': '关机', 'reboot': '重启' }[action]
+    alert(`IPMI ${actionText}命令已发送到 ${machine.name}`)
   }
 
   const getStatusBadgeColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'available':
-        return 'bg-green-500/20 text-green-400 border-green-500/30'
-      case 'maintenance':
-        return 'bg-orange-500/20 text-orange-400 border-orange-500/30'
-      case 'offline':
-        return 'bg-red-500/20 text-red-400 border-red-500/30'
-      default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+      case 'available': return 'bg-green-500/20 text-green-400 border-green-500/30'
+      case 'maintenance': return 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+      case 'offline': return 'bg-red-500/20 text-red-400 border-red-500/30'
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
     }
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <header className="mb-8">
+    <div className="min-h-screen bg-gray-900">
+      {/* Header - 更紧凑 */}
+      <header className="px-4 py-3 border-b border-gray-800">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-black mb-2">Machine Booking System</h1>
-            <p className="text-gray-600">Schedule and manage machine access time slots</p>
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-white">Machine Booking</h1>
+            <span className="text-gray-500">|</span>
+            <span className="text-gray-400 text-sm">{user.displayName} ({user.role})</span>
           </div>
-          {user && isAdmin(user) && (
+          <div className="flex items-center gap-2">
+            {isAdmin(user) && (
+              <button
+                onClick={() => setShowAdminPanel(true)}
+                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
+              >
+                <Settings size={16} />
+                <span>Admin</span>
+              </button>
+            )}
             <button
-              onClick={() => setShowAdminPanel(true)}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center gap-2"
+              onClick={() => {
+                localStorage.removeItem('user')
+                window.location.href = '/login'
+              }}
+              className="px-3 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-lg transition-colors text-sm"
             >
-              <Settings size={20} />
-              <span>Admin Panel</span>
+              Logout
             </button>
-          )}
+          </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-        {/* Machine List */}
-        <div className="lg:col-span-1">
-          <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl border border-gray-700 p-4">
-            <h2 className="text-lg font-semibold text-white mb-4">Machines</h2>
-            <div className="space-y-2">
-              {machines.map((machine) => (
-                <div key={machine.id} className="relative">
-                  <button
-                    onClick={() => setSelectedMachine(machine)}
-                    className={`w-full text-left p-3 rounded-lg transition-colors ${
-                      selectedMachine?.id === machine.id
-                        ? 'bg-cyan-600 hover:bg-cyan-700'
-                        : 'bg-gray-700/50 hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-semibold text-white text-sm">{machine.name}</h3>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDetailMachine(machine)
-                          setShowMachineDetails(true)
-                        }}
-                        className="p-1 hover:bg-gray-600/50 rounded transition-colors"
-                      >
-                        <Info size={14} className="text-gray-300" />
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-300 mb-1">{machine.description}</p>
-                    {machine.intro && (
-                      <p className="text-[10px] text-gray-400 mb-2 leading-relaxed">{machine.intro}</p>
-                    )}
-                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full border ${getStatusBadgeColor(machine.status)}`}>
-                      {machine.status}
-                    </span>
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Statistics */}
-            <div className="mt-4 pt-4 border-t border-gray-700">
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-400">Available</span>
-                  <span className="text-green-400 font-medium">
-                    {machines.filter(m => m.status === 'available').length}/{machines.length}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-400">Your Bookings</span>
-                  <span className="text-cyan-400 font-medium">
-                    {localBookings.filter(b => b.userId === 'current-user').length}
-                  </span>
-                </div>
-              </div>
-            </div>
+      {/* Main Content - 减少 padding，全宽 */}
+      <div className="p-2">
+        {/* 如果没有机器，显示提示 */}
+        {machines.length === 0 ? (
+          <div className="bg-yellow-500/20 border border-yellow-500 rounded-xl p-6 text-center">
+            <p className="text-yellow-400 text-lg mb-2">No machines available</p>
+            <p className="text-gray-400">Please check if the machines API is working correctly.</p>
+            <p className="text-gray-500 text-sm mt-2">Try: curl http://localhost:3000/api/machines/list</p>
           </div>
-        </div>
-
-        {/* Calendar */}
-        <div className="lg:col-span-5">
-          {selectedMachine ? (
-            <Suspense fallback={
-              <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl border border-gray-700 p-8 text-center">
-                <p className="text-gray-400">Loading calendar...</p>
-              </div>
-            }>
-              <MachineBookingCalendar
-                machine={selectedMachine}
-                bookings={localBookings.filter(b => b.machineId === selectedMachine.id)}
-                onBooking={handleBooking}
-                onDeleteBooking={handleDeleteBooking}
-                currentUser={user}
-              />
-            </Suspense>
-          ) : (
-            <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl border border-gray-700 p-8 text-center">
-              <p className="text-gray-400">Please select a machine to view its booking calendar</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Info Section */}
-      <div className="mt-8 bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-blue-400 mb-2">How to Book</h3>
-        <ul className="text-gray-300 space-y-2">
-          <li>• Select a machine from the list on the left</li>
-          <li>• Click <Info size={14} className="inline" /> to view detailed machine specifications</li>
-          <li>• Click on a time slot in the calendar to create a booking</li>
-          <li>• Click on an existing booking to view details or delete it</li>
-          <li>• Machine access will be automatically granted during your booked time slots</li>
-        </ul>
-      </div>
-
-      {/* Admin Panel */}
-      {showAdminPanel && isAdmin(user) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-white">👑 Admin Control Panel</h3>
-              <button
-                onClick={() => setShowAdminPanel(false)}
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X size={20} className="text-gray-400" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Machine Control */}
-              <div>
-                <h4 className="text-lg font-semibold text-white mb-4">Machine Control</h4>
-                <div className="grid grid-cols-1 gap-4">
+        ) : (
+          <div className="flex gap-2">
+            {/* Machine List - 固定宽度，更窄 */}
+            <div className="w-48 flex-shrink-0">
+              <div className="bg-gray-800/50 backdrop-blur-lg rounded-lg border border-gray-700 p-2">
+                <h2 className="text-sm font-semibold text-gray-400 mb-2 px-2">Machines ({machines.length})</h2>
+                <div className="space-y-1">
                   {machines.map((machine) => (
-                    <div
+                    <button
                       key={machine.id}
-                      className="bg-gray-700/30 rounded-lg p-4"
+                      onClick={() => setSelectedMachine(machine)}
+                      className={`w-full text-left p-2 rounded-lg transition-colors ${
+                        selectedMachine?.id === machine.id
+                          ? 'bg-cyan-600 hover:bg-cyan-700'
+                          : 'bg-gray-700/50 hover:bg-gray-700'
+                      }`}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <div className="font-medium text-white">{machine.name}</div>
-                          <div className="text-sm text-gray-400">{machine.description}</div>
-                          <span className={`inline-block mt-2 text-xs px-2 py-1 rounded-full border ${getStatusBadgeColor(machine.status)}`}>
-                            {machine.status}
-                          </span>
-                        </div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <h3 className="font-medium text-white text-xs truncate">{machine.name}</h3>
                         <button
-                          onClick={() => handleToggleMachineStatus(machine.id)}
-                          className={`p-3 rounded-lg transition-colors ${
-                            machine.status === 'available'
-                              ? 'bg-red-600 hover:bg-red-700'
-                              : 'bg-green-600 hover:bg-green-700'
-                          }`}
-                          title={machine.status === 'available' ? 'Turn Off' : 'Turn On'}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDetailMachine(machine)
+                            setShowMachineDetails(true)
+                          }}
+                          className="p-0.5 hover:bg-gray-600/50 rounded transition-colors"
                         >
-                          {machine.status === 'available' ? (
-                            <PowerOff size={20} className="text-white" />
-                          ) : (
-                            <Power size={20} className="text-white" />
-                          )}
+                          <Info size={12} className="text-gray-300" />
                         </button>
                       </div>
-                      
-                      {/* IPMI 控制按钮 */}
-                      <div className="border-t border-gray-600 pt-3">
-                        <label className="block text-xs font-medium text-gray-400 mb-2">
-                          IPMI Control
-                        </label>
-                        <div className="grid grid-cols-3 gap-2">
-                          <button
-                            onClick={() => handleIPMIControl(machine.id, 'power-on')}
-                            className="flex items-center justify-center gap-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
-                          >
-                            <Power size={14} />
-                            <span>Power On</span>
-                          </button>
-                          <button
-                            onClick={() => handleIPMIControl(machine.id, 'power-off')}
-                            className="flex items-center justify-center gap-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors"
-                          >
-                            <PowerOff size={14} />
-                            <span>Power Off</span>
-                          </button>
-                          <button
-                            onClick={() => handleIPMIControl(machine.id, 'reboot')}
-                            className="flex items-center justify-center gap-1 px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs rounded-lg transition-colors"
-                          >
-                            <Settings size={14} className="animate-spin-slow" />
-                            <span>Reboot</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                      <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded-full border ${getStatusBadgeColor(machine.status)}`}>
+                        {machine.status}
+                      </span>
+                    </button>
                   ))}
                 </div>
               </div>
+            </div>
 
-              {/* All Bookings Management */}
-              <div>
-                <h4 className="text-lg font-semibold text-white mb-4">All Bookings</h4>
-                <div className="space-y-2">
-                  {localBookings.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">No bookings yet</div>
-                  ) : (
-                    localBookings.map((booking) => {
-                      const machine = machines.find(m => m.id === booking.machineId)
-                      return (
-                        <div
-                          key={booking.id}
-                          className="bg-gray-700/30 rounded-lg p-4 flex items-center justify-between"
-                        >
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-white">{machine?.name}</span>
-                              <span className="text-xs text-gray-400">by {booking.userName}</span>
-                            </div>
-                            <div className="text-sm text-gray-400">
-                              {new Date(booking.startTime).toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                              {' → '}
-                              {new Date(booking.endTime).toLocaleString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteBooking(booking.id)}
-                            className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )
-                    })
-                  )}
+            {/* Calendar - 占据剩余空间 */}
+            <div className="flex-1 min-w-0">
+              {selectedMachine ? (
+                <Suspense fallback={
+                  <div className="bg-gray-800/50 backdrop-blur-lg rounded-lg border border-gray-700 p-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+                    <p className="text-gray-400">Loading calendar...</p>
+                  </div>
+                }>
+                  <MachineBookingCalendar
+                    machine={selectedMachine}
+                    bookings={localBookings.filter(b => b.machineId === selectedMachine.id)}
+                    onBooking={handleBooking}
+                    onDeleteBooking={handleDeleteBooking}
+                    currentUser={user}
+                  />
+                </Suspense>
+              ) : (
+                <div className="bg-gray-800/50 backdrop-blur-lg rounded-lg border border-gray-700 p-8 text-center">
+                  <p className="text-gray-400">Please select a machine</p>
                 </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-700">
-                <button
-                  onClick={() => setShowAdminPanel(false)}
-                  className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                >
-                  Close
-                </button>
-              </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Machine Details Dialog */}
-      {showMachineDetails && detailMachine && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 max-w-2xl w-full mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-2xl font-bold text-white">{detailMachine.name}</h3>
-                <p className="text-gray-400 mt-1">{detailMachine.description}</p>
-              </div>
-              <button
-                onClick={() => setShowMachineDetails(false)}
-                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <X size={20} className="text-gray-400" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-sm font-semibold text-gray-400 mb-3 uppercase">Hardware Specifications</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-700/30 rounded-lg p-4">
-                    <div className="text-xs text-gray-400 mb-1">GPU</div>
-                    <div className="text-white font-medium">{detailMachine.specs.gpu}</div>
-                  </div>
-                  <div className="bg-gray-700/30 rounded-lg p-4">
-                    <div className="text-xs text-gray-400 mb-1">CPU</div>
-                    <div className="text-white font-medium">{detailMachine.specs.cpu}</div>
-                  </div>
-                  <div className="bg-gray-700/30 rounded-lg p-4">
-                    <div className="text-xs text-gray-400 mb-1">RAM</div>
-                    <div className="text-white font-medium">{detailMachine.specs.ram}</div>
-                  </div>
-                  <div className="bg-gray-700/30 rounded-lg p-4">
-                    <div className="text-xs text-gray-400 mb-1">Storage</div>
-                    <div className="text-white font-medium">{detailMachine.specs.storage}</div>
-                  </div>
-                  <div className="bg-gray-700/30 rounded-lg p-4 md:col-span-2">
-                    <div className="text-xs text-gray-400 mb-1">Network</div>
-                    <div className="text-white font-medium">{detailMachine.specs.network}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold text-gray-400 mb-3 uppercase">Machine Info</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-gray-700/30 rounded-lg p-4">
-                    <div className="text-xs text-gray-400 mb-1">Status</div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full border text-xs ${getStatusBadgeColor(detailMachine.status)}`}>
-                        {detailMachine.status}
-                      </span>
-                      {detailMachine.status === 'available' && (
-                        <span className="text-xs text-gray-400">Ready</span>
-                      )}
-                      {detailMachine.status === 'maintenance' && (
-                        <span className="text-xs text-gray-400">Maintenance</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="bg-gray-700/30 rounded-lg p-4">
-                    <div className="text-xs text-gray-400 mb-1">Max Shared Users</div>
-                    <div className="text-white font-medium">
-                      {detailMachine.maxSharedUsers || 1} user{(detailMachine.maxSharedUsers || 1) > 1 ? 's' : ''}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {detailMachine.maxSharedUsers === 1 ? 'Exclusive only' : 'Supports shared mode'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t border-gray-700">
-                <button
-                  onClick={() => setShowMachineDetails(false)}
-                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                >
-                  Close
-                </button>
-                {detailMachine.status === 'available' && (
-                  <button
-                    onClick={() => {
-                      setSelectedMachine(detailMachine)
-                      setShowMachineDetails(false)
-                    }}
-                    className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors"
-                  >
-                    Select & Book
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
-

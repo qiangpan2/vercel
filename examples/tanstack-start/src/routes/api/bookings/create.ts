@@ -1,88 +1,85 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
-import { bookingDB, machineDB } from '~/lib/db/redis'
-import { canBook } from '~/lib/booking/validator'
-import { addGrantAccessTask } from '~/lib/queues/permission'
+import db from '../../../lib/db/booking'
 
-/**
- * POST /api/bookings/create
- * 创建预订
- * 
- * TODO: 实现真实的服务器端会话管理
- * 当前为演示版本，从请求体中获取用户信息（生产环境需改为从会话获取）
- */
+
+// POST /api/bookings/create
 export const Route = createFileRoute('/api/bookings/create')({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
           const body = await request.json()
-          const { machineId, startTime, endTime, mode, username, displayName } = body
+          const { 
+            machineId,  // 前端传 machineId
+            startTime, 
+            endTime, 
+            ntid, 
+            displayName,
+            reason,
+            isExclusive 
+          } = body
           
-          // TODO: 在生产环境中，应该从会话/Cookie/JWT 中获取用户
-          // const user = await getCurrentUser(request)
-          // const username = user.username
-          // const displayName = user.displayName
+          console.log('[API] Creating booking:', { machineId, ntid, startTime, endTime })
           
-          // 验证参数
-          if (!machineId || !startTime || !endTime || !mode) {
-            return json({ error: 'Missing required fields' }, { status: 400 })
-          }
-          
-          if (!username) {
-            return json({ error: 'Please login first' }, { status: 401 })
-          }
-          
-          if (!['exclusive', 'shared'].includes(mode)) {
-            return json({ error: 'Invalid mode' }, { status: 400 })
-          }
-          
-          // 冲突检查
-          const validation = await canBook(machineId, startTime, endTime, mode)
-          if (!validation.canBook) {
+          // 验证必填字段
+          if (!machineId || !startTime || !endTime || !ntid) {
             return json({ 
-              error: validation.reason,
-              currentCount: validation.currentCount 
-            }, { status: 409 })
+              success: false, 
+              error: 'Missing required fields: machineId, startTime, endTime, ntid' 
+            }, { status: 400 })
           }
           
-          // 创建预订
-          const bookingId = await bookingDB.create({
-            machineId,
-            ssoUsername: username,
-            displayName: displayName || username,
-            startTime,
-            endTime,
-            mode,
-            status: 'pending'
-          })
-          
-          // 触发授权任务
-          const machine = await machineDB.get(machineId)
-          if (!machine) {
-            return json({ error: 'Machine not found' }, { status: 404 })
+          // 确保用户存在（如果不存在则创建）
+          const existingUser = db.prepare('SELECT ntid FROM users WHERE ntid = ?').get(ntid)
+          if (!existingUser) {
+            db.prepare(`
+              INSERT INTO users (ntid, display_name, user_level)
+              VALUES (?, ?, 'developer')
+            `).run(ntid, displayName || ntid)
+            console.log('[API] Created new user:', ntid)
           }
           
-          await addGrantAccessTask({
-            bookingId,
-            machineId,
-            ssoUsername: username,
-            accessGroup: machine.access_group,
-            endTime
-          })
+          // 检查时间冲突（对于独占预订）
+          if (isExclusive) {
+            const conflicts = db.prepare(`
+              SELECT id FROM bookings
+              WHERE server_id = ?
+                AND status = 'active'
+                AND is_exclusive = 1
+                AND (
+                  (start_time < ? AND end_time > ?)
+                  OR (start_time < ? AND end_time > ?)
+                  OR (start_time >= ? AND end_time <= ?)
+                )
+            `).all(machineId, endTime, startTime, endTime, startTime, startTime, endTime)
+            
+            if (conflicts.length > 0) {
+              return json({ 
+                success: false, 
+                error: 'Time slot conflicts with existing exclusive booking' 
+              }, { status: 409 })
+            }
+          }
           
-          return json({ 
+          // 插入预订
+          const result = db.prepare(`
+            INSERT INTO bookings (server_id, ntid, book_reason, start_time, end_time, is_exclusive, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'active')
+          `).run(machineId, ntid, reason || null, startTime, endTime, isExclusive ? 1 : 0)
+          
+          console.log('[API] Booking created with ID:', result.lastInsertRowid)
+          
+          return json({
             success: true,
-            bookingId,
-            ssoUsername: username,
-            message: '预订成功！正在配置访问权限...'
+            bookingId: String(result.lastInsertRowid),
+            message: 'Booking created successfully'
           })
-          
         } catch (error) {
           console.error('[API] Create booking error:', error)
           return json({ 
-            error: 'Failed to create booking',
-            details: String(error)
+            success: false, 
+            error: 'Failed to create booking' 
           }, { status: 500 })
         }
       }

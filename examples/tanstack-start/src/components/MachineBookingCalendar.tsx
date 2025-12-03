@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { Calendar, dateFnsLocalizer, SlotInfo, Event as BigCalendarEvent, View } from 'react-big-calendar'
 import { format, parse, startOfWeek as dateFnsStartOfWeek, getDay as dateFnsGetDay } from 'date-fns'
-import { Clock, User, X } from 'lucide-react'
+import { Clock, User as UserIcon, X } from 'lucide-react'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
 interface Machine {
@@ -28,10 +28,13 @@ interface Booking {
   endTime: number
 }
 
+// 更新 User 接口以匹配实际数据
 interface User {
-  username: string
-  role: 'admin' | 'user'
+  ntid?: string
+  username?: string
+  role: 'viewer' | 'developer' | 'admin' | 'user'
   displayName: string
+  email?: string
 }
 
 interface MachineBookingCalendarProps {
@@ -64,6 +67,18 @@ interface BookingDetailDialogState {
   booking: Booking | null
 }
 
+// Helper function to get user identifier (ntid or username)
+const getUserId = (user: User | null): string => {
+  if (!user) return ''
+  return user.ntid || user.username || ''
+}
+
+// Helper function to check if user is admin
+const isAdminUser = (user: User | null): boolean => {
+  if (!user) return false
+  return user.role === 'admin'
+}
+
 // Configure date-fns localizer without locale (uses English by default)
 // Helper function to format date and time
 const formatDateTime = (date: Date, type: 'full' | 'time' | 'short') => {
@@ -71,17 +86,14 @@ const formatDateTime = (date: Date, type: 'full' | 'time' | 'short') => {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
   
   if (type === 'full') {
-    // "Monday, November 25, 2024"
     return `${weekdays[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
   } else if (type === 'time') {
-    // "9:30 AM"
     const hours = date.getHours()
     const minutes = date.getMinutes()
     const ampm = hours >= 12 ? 'PM' : 'AM'
     const displayHours = hours % 12 || 12
     return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`
   } else {
-    // "Nov 25"
     const shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
     return `${shortMonths[date.getMonth()]} ${date.getDate()}`
   }
@@ -116,6 +128,9 @@ export default function MachineBookingCalendar({
     booking: null
   })
 
+  // 获取当前用户 ID
+  const currentUserId = getUserId(currentUser)
+
   // Convert bookings to calendar events
   const events: CalendarEvent[] = useMemo(() => {
     return bookings.map(booking => ({
@@ -125,24 +140,36 @@ export default function MachineBookingCalendar({
       end: new Date(booking.endTime),
       resource: {
         booking,
-        isCurrentUser: currentUser ? booking.userId === currentUser.username : false
+        isCurrentUser: currentUserId ? booking.userId === currentUserId : false
       }
     }))
-  }, [bookings, currentUser])
+  }, [bookings, currentUserId])
 
   // Handle selecting a time slot
   const handleSelectSlot = useCallback((slotInfo: SlotInfo) => {
-    if (machine.status !== 'available') return
+    // 检查用户权限（viewer 不能预订）
+    if (!currentUser || currentUser.role === 'viewer') {
+      alert('You do not have permission to create bookings')
+      return
+    }
+    
+    if (machine.status !== 'available') {
+      alert('This machine is not available for booking')
+      return
+    }
     
     const now = new Date()
-    if (slotInfo.start < now) return // Prevent booking past time slots
+    if (slotInfo.start < now) {
+      alert('Cannot book past time slots')
+      return
+    }
     
     setBookingDialog({
       isOpen: true,
       start: slotInfo.start,
       end: slotInfo.end
     })
-  }, [machine.status])
+  }, [machine.status, currentUser])
 
   // Handle selecting an existing event
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
@@ -168,9 +195,11 @@ export default function MachineBookingCalendar({
     }
   }
 
+  // 检查当前用户是否可以删除预订
   const isCurrentUserBooking = (booking: Booking) => {
     if (!currentUser) return false
-    return booking.userId === currentUser.username || currentUser.role === 'admin'
+    // Admin 可以删除任何预订，否则只能删除自己的
+    return booking.userId === currentUserId || isAdminUser(currentUser)
   }
 
   // Custom event style
@@ -221,19 +250,37 @@ export default function MachineBookingCalendar({
     return {}
   }, [machine.status])
 
-  return (
-    <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl border border-gray-700">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-700">
-        <div>
-          <h2 className="text-2xl font-bold text-white">{machine.name}</h2>
-          <p className="text-gray-400 text-sm">{machine.description}</p>
+    return (
+    <div className="bg-gray-800/50 backdrop-blur-lg rounded-lg border border-gray-700 h-full">
+      {/* Header - 更紧凑，单行 */}
+      <div className="px-3 py-2 border-b border-gray-700 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-white">{machine.name}</h2>
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            machine.status === 'available' 
+              ? 'bg-green-500/20 text-green-400' 
+              : 'bg-red-500/20 text-red-400'
+          }`}>
+            {machine.status}
+          </span>
+          <span className="text-gray-500 text-sm hidden md:inline">— {machine.description}</span>
+        </div>
+        {/* Legend - 移到 header 右侧 */}
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 bg-cyan-600 rounded"></div>
+            <span className="text-gray-400">You</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 bg-purple-600 rounded"></div>
+            <span className="text-gray-400">Others</span>
+          </div>
         </div>
       </div>
 
-      {/* Calendar */}
-      <div className="p-6">
-        <div className="bg-white rounded-lg overflow-hidden" style={{ height: '800px' }}>
+      {/* Calendar - 最大化高度 */}
+      <div className="p-2">
+        <div className="bg-white rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 130px)', minHeight: '600px' }}>
           <Calendar
             localizer={localizer}
             events={events}
@@ -244,7 +291,7 @@ export default function MachineBookingCalendar({
             date={date}
             onNavigate={setDate}
             views={['month', 'week', 'day']}
-            selectable
+            selectable={currentUser?.role !== 'viewer'}
             onSelectSlot={handleSelectSlot}
             onSelectEvent={handleSelectEvent}
             eventPropGetter={eventStyleGetter}
@@ -252,8 +299,8 @@ export default function MachineBookingCalendar({
             components={{
               event: EventComponent,
             }}
-            min={new Date(0, 0, 0, 0, 0, 0)} // 12:00 AM (midnight)
-            max={new Date(0, 0, 0, 23, 59, 59)} // 11:59 PM
+            min={new Date(0, 0, 0, 0, 0, 0)}
+            max={new Date(0, 0, 0, 23, 59, 59)}
             step={30}
             timeslots={2}
             formats={{
@@ -267,17 +314,9 @@ export default function MachineBookingCalendar({
               eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) => {
                 return `${formatDateTime(start, 'time')} - ${formatDateTime(end, 'time')}`
               },
-              agendaTimeFormat: (date: Date) => formatDateTime(date, 'time'),
-              agendaTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) => {
-                return `${formatDateTime(start, 'time')} - ${formatDateTime(end, 'time')}`
-              },
               dayFormat: (date: Date) => {
                 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
                 return `${days[date.getDay()]} ${date.getDate()}`
-              },
-              weekdayFormat: (date: Date) => {
-                const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-                return weekdays[date.getDay()]
               },
               monthHeaderFormat: (date: Date) => {
                 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -296,25 +335,9 @@ export default function MachineBookingCalendar({
             style={{ height: '100%' }}
           />
         </div>
-
-        {/* Legend */}
-        <div className="mt-6 flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-cyan-600 rounded border-2 border-cyan-400"></div>
-            <span className="text-gray-300">Your Bookings</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-purple-600 rounded border-2 border-purple-400"></div>
-            <span className="text-gray-300">Others' Bookings</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-gray-800/50 rounded"></div>
-            <span className="text-gray-300">Past / Unavailable</span>
-          </div>
-        </div>
       </div>
 
-      {/* Booking Dialog */}
+      {/* Booking Dialog - 保持原样 */}
       {bookingDialog.isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 max-w-md w-full mx-4">
@@ -343,19 +366,12 @@ export default function MachineBookingCalendar({
                       value={bookingDialog.start.toISOString().split('T')[0]}
                       onChange={(e) => {
                         if (!bookingDialog.start || !bookingDialog.end) return
-                        
                         const newDate = new Date(e.target.value)
                         const newStart = new Date(bookingDialog.start)
                         const newEnd = new Date(bookingDialog.end)
-                        
                         newStart.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate())
                         newEnd.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate())
-                        
-                        setBookingDialog({
-                          ...bookingDialog,
-                          start: newStart,
-                          end: newEnd
-                        })
+                        setBookingDialog({ ...bookingDialog, start: newStart, end: newEnd })
                       }}
                       className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     />
@@ -370,28 +386,19 @@ export default function MachineBookingCalendar({
                         step="1800"
                         onChange={(e) => {
                           if (!bookingDialog.start || !bookingDialog.end) return
-                          
                           const [hours, minutes] = e.target.value.split(':').map(Number)
                           const newStart = new Date(bookingDialog.start)
                           newStart.setHours(hours, minutes, 0, 0)
-                          
-                          // If start time is after end time, adjust end time
                           let newEnd = new Date(bookingDialog.end)
                           if (newStart >= newEnd) {
                             newEnd = new Date(newStart)
                             newEnd.setMinutes(newStart.getMinutes() + 30)
                           }
-                          
-                          setBookingDialog({
-                            ...bookingDialog,
-                            start: newStart,
-                            end: newEnd
-                          })
+                          setBookingDialog({ ...bookingDialog, start: newStart, end: newEnd })
                         }}
                         className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                       />
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">End Time</label>
                       <input
@@ -400,17 +407,11 @@ export default function MachineBookingCalendar({
                         step="1800"
                         onChange={(e) => {
                           if (!bookingDialog.start || !bookingDialog.end) return
-                          
                           const [hours, minutes] = e.target.value.split(':').map(Number)
                           const newEnd = new Date(bookingDialog.end)
                           newEnd.setHours(hours, minutes, 0, 0)
-                          
-                          // Ensure end time is after start time
                           if (newEnd > bookingDialog.start) {
-                            setBookingDialog({
-                              ...bookingDialog,
-                              end: newEnd
-                            })
+                            setBookingDialog({ ...bookingDialog, end: newEnd })
                           }
                         }}
                         className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
@@ -424,9 +425,7 @@ export default function MachineBookingCalendar({
                       <span>Booking Summary</span>
                     </div>
                     <div className="text-white">
-                      <div className="font-medium">
-                        {formatDateTime(bookingDialog.start, 'full')}
-                      </div>
+                      <div className="font-medium">{formatDateTime(bookingDialog.start, 'full')}</div>
                       <div className="text-cyan-400 mt-1">
                         {formatDateTime(bookingDialog.start, 'time')} → {formatDateTime(bookingDialog.end, 'time')}
                       </div>
@@ -479,7 +478,7 @@ export default function MachineBookingCalendar({
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                  <User size={16} />
+                  <UserIcon size={16} />
                   Booked By
                 </label>
                 <div className="text-white">{bookingDetailDialog.booking.userName}</div>
@@ -527,121 +526,29 @@ export default function MachineBookingCalendar({
 
       {/* Custom Styles */}
       <style>{`
-        .rbc-calendar {
-          font-family: inherit;
-        }
-        
-        .rbc-header {
-          padding: 12px 4px;
-          font-weight: 600;
-          color: #1f2937;
-          border-bottom: 2px solid #e5e7eb;
-        }
-        
-        .rbc-time-view {
-          border: 1px solid #e5e7eb;
-        }
-        
-        .rbc-time-header-content {
-          border-left: 1px solid #e5e7eb;
-        }
-        
-        .rbc-time-content {
-          border-top: 1px solid #e5e7eb;
-        }
-        
-        .rbc-day-slot .rbc-time-slot {
-          border-top: 1px solid #f3f4f6;
-        }
-        
-        .rbc-time-slot {
-          min-height: 25px;
-        }
-        
-        .rbc-today {
-          background-color: #ecfeff;
-        }
-        
-        .rbc-current-time-indicator {
-          background-color: #ef4444;
-          height: 2px;
-        }
-        
-        .rbc-event {
-          padding: 4px 6px;
-          cursor: pointer;
-        }
-        
-        .rbc-event:hover {
-          opacity: 0.9;
-        }
-        
-        .rbc-slot-selection {
-          background-color: rgba(8, 145, 178, 0.3);
-          border: 2px dashed #0891b2;
-        }
-        
-        .rbc-toolbar {
-          padding: 16px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background-color: #f9fafb;
-          border-bottom: 1px solid #e5e7eb;
-          margin-bottom: 0;
-        }
-        
-        .rbc-toolbar button {
-          color: #374151;
-          border: 1px solid #d1d5db;
-          background-color: white;
-          padding: 6px 12px;
-          border-radius: 6px;
-          font-weight: 500;
-          transition: all 0.2s;
-        }
-        
-        .rbc-toolbar button:hover {
-          background-color: #f3f4f6;
-          border-color: #9ca3af;
-        }
-        
-        .rbc-toolbar button:active,
-        .rbc-toolbar button.rbc-active {
-          background-color: #0891b2;
-          color: white;
-          border-color: #0891b2;
-        }
-        
-        .rbc-toolbar button:focus {
-          outline: none;
-          box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.2);
-        }
-        
-        .rbc-month-view {
-          border: 1px solid #e5e7eb;
-        }
-        
-        .rbc-month-row {
-          border-top: 1px solid #e5e7eb;
-        }
-        
-        .rbc-day-bg + .rbc-day-bg {
-          border-left: 1px solid #e5e7eb;
-        }
-        
-        .rbc-date-cell {
-          padding: 8px;
-          text-align: right;
-        }
-        
-        .rbc-off-range {
-          color: #9ca3af;
-        }
-        
-        .rbc-off-range-bg {
-          background-color: rgba(31, 41, 55, 0.5);
-        }
+        .rbc-calendar { font-family: inherit; }
+        .rbc-header { padding: 12px 4px; font-weight: 600; color: #1f2937; border-bottom: 2px solid #e5e7eb; }
+        .rbc-time-view { border: 1px solid #e5e7eb; }
+        .rbc-time-header-content { border-left: 1px solid #e5e7eb; }
+        .rbc-time-content { border-top: 1px solid #e5e7eb; }
+        .rbc-day-slot .rbc-time-slot { border-top: 1px solid #f3f4f6; }
+        .rbc-time-slot { min-height: 25px; }
+        .rbc-today { background-color: #ecfeff; }
+        .rbc-current-time-indicator { background-color: #ef4444; height: 2px; }
+        .rbc-event { padding: 4px 6px; cursor: pointer; }
+        .rbc-event:hover { opacity: 0.9; }
+        .rbc-slot-selection { background-color: rgba(8, 145, 178, 0.3); border: 2px dashed #0891b2; }
+        .rbc-toolbar { padding: 16px; display: flex; justify-content: space-between; align-items: center; background-color: #f9fafb; border-bottom: 1px solid #e5e7eb; margin-bottom: 0; }
+        .rbc-toolbar button { color: #374151; border: 1px solid #d1d5db; background-color: white; padding: 6px 12px; border-radius: 6px; font-weight: 500; transition: all 0.2s; }
+        .rbc-toolbar button:hover { background-color: #f3f4f6; border-color: #9ca3af; }
+        .rbc-toolbar button:active, .rbc-toolbar button.rbc-active { background-color: #0891b2; color: white; border-color: #0891b2; }
+        .rbc-toolbar button:focus { outline: none; box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.2); }
+        .rbc-month-view { border: 1px solid #e5e7eb; }
+        .rbc-month-row { border-top: 1px solid #e5e7eb; }
+        .rbc-day-bg + .rbc-day-bg { border-left: 1px solid #e5e7eb; }
+        .rbc-date-cell { padding: 8px; text-align: right; }
+        .rbc-off-range { color: #9ca3af; }
+        .rbc-off-range-bg { background-color: rgba(31, 41, 55, 0.5); }
       `}</style>
     </div>
   )

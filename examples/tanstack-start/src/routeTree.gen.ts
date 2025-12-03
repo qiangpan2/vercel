@@ -19,7 +19,10 @@ import { Route as DemoStartApiRequestRouteImport } from './routes/demo/start.api
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
 import { Route as ApiMachinesListRouteImport } from './routes/api/machines/list'
 import { Route as ApiBookingsListRouteImport } from './routes/api/bookings/list'
+import { Route as ApiBookingsDeleteRouteImport } from './routes/api/bookings/delete'
 import { Route as ApiBookingsCreateRouteImport } from './routes/api/bookings/create'
+import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as DemoStartSsrIndexRouteImport } from './routes/demo/start.ssr.index'
 import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr.spa-mode'
@@ -76,9 +79,24 @@ const ApiBookingsListRoute = ApiBookingsListRouteImport.update({
   path: '/api/bookings/list',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBookingsDeleteRoute = ApiBookingsDeleteRouteImport.update({
+  id: '/api/bookings/delete',
+  path: '/api/bookings/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBookingsCreateRoute = ApiBookingsCreateRouteImport.update({
   id: '/api/bookings/create',
   path: '/api/bookings/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMeRoute = ApiAuthMeRouteImport.update({
+  id: '/api/auth/me',
+  path: '/api/auth/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
@@ -114,7 +132,10 @@ export interface FileRoutesByFullPath {
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
   '/api/bookings/create': typeof ApiBookingsCreateRoute
+  '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/demo/api/names': typeof DemoApiNamesRoute
@@ -132,7 +153,10 @@ export interface FileRoutesByTo {
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
   '/api/bookings/create': typeof ApiBookingsCreateRoute
+  '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/demo/api/names': typeof DemoApiNamesRoute
@@ -151,7 +175,10 @@ export interface FileRoutesById {
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
   '/api/bookings/create': typeof ApiBookingsCreateRoute
+  '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/demo/api/names': typeof DemoApiNamesRoute
@@ -171,7 +198,10 @@ export interface FileRouteTypes {
     | '/help'
     | '/login'
     | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/me'
     | '/api/bookings/create'
+    | '/api/bookings/delete'
     | '/api/bookings/list'
     | '/api/machines/list'
     | '/demo/api/names'
@@ -189,7 +219,10 @@ export interface FileRouteTypes {
     | '/help'
     | '/login'
     | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/me'
     | '/api/bookings/create'
+    | '/api/bookings/delete'
     | '/api/bookings/list'
     | '/api/machines/list'
     | '/demo/api/names'
@@ -207,7 +240,10 @@ export interface FileRouteTypes {
     | '/help'
     | '/login'
     | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/me'
     | '/api/bookings/create'
+    | '/api/bookings/delete'
     | '/api/bookings/list'
     | '/api/machines/list'
     | '/demo/api/names'
@@ -226,7 +262,10 @@ export interface RootRouteChildren {
   HelpRoute: typeof HelpRoute
   LoginRoute: typeof LoginRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiBookingsCreateRoute: typeof ApiBookingsCreateRoute
+  ApiBookingsDeleteRoute: typeof ApiBookingsDeleteRoute
   ApiBookingsListRoute: typeof ApiBookingsListRoute
   ApiMachinesListRoute: typeof ApiMachinesListRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
@@ -310,11 +349,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBookingsListRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bookings/delete': {
+      id: '/api/bookings/delete'
+      path: '/api/bookings/delete'
+      fullPath: '/api/bookings/delete'
+      preLoaderRoute: typeof ApiBookingsDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/bookings/create': {
       id: '/api/bookings/create'
       path: '/api/bookings/create'
       fullPath: '/api/bookings/create'
       preLoaderRoute: typeof ApiBookingsCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/me': {
+      id: '/api/auth/me'
+      path: '/api/auth/me'
+      fullPath: '/api/auth/me'
+      preLoaderRoute: typeof ApiAuthMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/login': {
@@ -362,7 +422,10 @@ const rootRouteChildren: RootRouteChildren = {
   HelpRoute: HelpRoute,
   LoginRoute: LoginRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthMeRoute: ApiAuthMeRoute,
   ApiBookingsCreateRoute: ApiBookingsCreateRoute,
+  ApiBookingsDeleteRoute: ApiBookingsDeleteRoute,
   ApiBookingsListRoute: ApiBookingsListRoute,
   ApiMachinesListRoute: ApiMachinesListRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,

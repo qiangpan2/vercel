@@ -1,68 +1,95 @@
-/**
- * 用户认证中间件
- * 提供登录验证和会话管理功能
- */
+import { authenticateWithLDAP, getUserByNtid } from './ldap_auth';
+import type { User } from '../db/booking';
 
-import { verifySSOUser } from './sso-verify'
+// 重新导出 User 类型供外部使用
+export type { User };
 
 export interface AuthUser {
-  username: string      // SSO 用户名
-  displayName: string   // 显示名称
-  email?: string
-  role: 'admin' | 'user'
+  ntid: string;
+  displayName: string;
+  email?: string;
+  role: 'viewer' | 'developer' | 'admin';
+  timezone: string;
 }
 
 /**
  * 登录 API
- * 调用 Python SSO 验证程序进行身份验证
+ * 使用 LDAP 进行身份验证
  */
-export async function login(username: string, password: string): Promise<AuthUser> {
-  // 调用 Python SSO 验证
-  const ssoUser = await verifySSOUser(username, password)
+export async function login(ntid: string, password: string): Promise<AuthUser> {
+  // test 模式下自动通过认证
+  const testMode = process.env.AUTH_TEST_MODE === 'true';
+  console.log('[Auth] Login attempt for NTID:', ntid, 'Test mode:', testMode);
+  if (testMode) {
+    console.log('[Auth] Test mode enabled - auto-approving user:', ntid);
+    return {
+      ntid,
+      displayName: `Test User ${ntid}`,
+      email: `${ntid}@amd.com`,
+      role: ntid === 'admin' ? 'admin' : 'developer',
+      timezone: 'UTC',
+    };
+  }
+
+  // 正常进行 LDAP 认证
+  const result = await authenticateWithLDAP(ntid, password);
   
-  if (!ssoUser) {
-    throw new Error('Invalid credentials')
+  if (!result.success || !result.user) {
+    throw new Error(result.error || 'Authentication failed');
   }
   
-  // 确定用户角色 (简单实现：root 用户为管理员)
-  const role: 'admin' | 'user' = username === 'root' ? 'admin' : 'user'
+  const user = result.user;
   
-  // 创建会话，存储用户名
   return {
-    username: ssoUser.username,      // SSO 用户名
-    displayName: ssoUser.displayName,
-    email: ssoUser.email,
-    role
+    ntid: user.ntid,
+    displayName: user.display_name || user.ntid,
+    email: user.email || `${user.ntid}@amd.com`,
+    role: user.user_level,
+    timezone: user.timezone,
+  };
+}
+
+// 获取当前用户信息
+export async function getCurrentUser(request: Request): Promise<AuthUser | null> {
+  // 从 cookie 中获取 session
+  const cookie = request.headers.get('cookie') || '';
+  const sessionId = cookie.match(/rapid_session=([^;]+)/)?.[1];
+  
+  if (!sessionId) {
+    return null;
   }
+  
+  // 验证 session
+  const { validateSession } = await import('./session');
+  const user = validateSession(sessionId);
+  
+  if (!user) {
+    return null;
+  }
+  
+  return {
+    ntid: user.ntid,
+    displayName: user.display_name || user.ntid,
+    email: user.email || undefined,
+    role: user.user_level,
+    timezone: user.timezone,
+  };
 }
 
-/**
- * 从请求中获取当前用户
- * 注意：这是一个简化版本，实际生产环境应该使用会话/Cookie/JWT
- */
-export async function getCurrentUser(_request: Request): Promise<AuthUser | null> {
-  // TODO: 在实际生产环境中，这里应该从会话/Cookie/JWT 中获取用户信息
-  // 目前作为示例，返回 null，前端使用 localStorage
+// 检查用户权限
+export function hasPermission(user: AuthUser | null, requiredLevel: 'viewer' | 'developer' | 'admin'): boolean {
+  if (!user) return false;
   
-  // 示例实现（需要根据实际会话管理方案调整）:
-  // const session = await getSession(_request)
-  // if (!session?.username) {
-  //   return null
-  // }
-  // return {
-  //   username: session.username,  // SSO 用户名
-  //   displayName: session.displayName,
-  //   email: session.email,
-  //   role: session.role
-  // }
-  
-  return null
+  const levels = { viewer: 0, developer: 1, admin: 2 };
+  return levels[user.role] >= levels[requiredLevel];
 }
 
-/**
- * 验证用户是否为管理员
- */
+// 判断管理员权限
 export function isAdmin(user: AuthUser | null): boolean {
-  return user?.role === 'admin'
+  return user?.role === 'admin';
 }
 
+// 判断是否可以预定
+export function canBook(user: AuthUser | null): boolean {
+  return hasPermission(user, 'developer');
+}
