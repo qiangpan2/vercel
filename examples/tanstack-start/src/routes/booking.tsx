@@ -25,7 +25,6 @@ interface Machine {
     network: string
   }
   maxSharedUsers?: number
-  // 额外的服务器信息
   ip?: string
   ipmi_ip?: string
   location?: string
@@ -355,6 +354,149 @@ function BookingPage() {
           </div>
         )}
       </div>
+      
+    {/* </div>
+  )
+} */}
+      {/* Machine Details Modal - 响应式设计 */}
+      {showMachineDetails && detailMachine && (
+        <div 
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-2 sm:p-4 md:p-6"
+          onClick={() => setShowMachineDetails(false)} // 点击背景关闭
+        >
+          <div 
+            className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()} // 阻止冒泡
+          >
+            {/* Header - 固定在顶部 */}
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-700 shrink-0">
+              <h3 className="text-lg sm:text-xl font-bold text-white truncate pr-2">{detailMachine.name}</h3>
+              <button
+                onClick={() => setShowMachineDetails(false)}
+                className="p-1.5 hover:bg-gray-700 rounded-lg transition-colors shrink-0"
+              >
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+            
+            {/* Content - 可滚动区域 */}
+            <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 overflow-y-auto flex-1">
+              {/* Status */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-gray-400 text-sm">Status:</span>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(detailMachine.status)}`}>
+                  {detailMachine.status}
+                </span>
+              </div>
+              
+              {/* Description */}
+              {detailMachine.description && (
+                <div>
+                  <span className="text-gray-400 text-xs sm:text-sm">Description:</span>
+                  <p className="text-white mt-1 text-sm sm:text-base break-words">{detailMachine.description}</p>
+                </div>
+              )}
+              
+              {/* Intro */}
+              {detailMachine.intro && (
+                <div>
+                  <span className="text-gray-400 text-xs sm:text-sm">Introduction:</span>
+                  <p className="text-white mt-1 text-sm sm:text-base break-words">{detailMachine.intro}</p>
+                </div>
+              )}
+              
+              {/* Network Info - 响应式网格 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {detailMachine.ip && (
+                  <div className="bg-gray-700/30 rounded-lg p-2 sm:p-3">
+                    <span className="text-gray-400 text-xs">IP Address:</span>
+                    <p className="text-white font-mono text-sm sm:text-base truncate">{detailMachine.ip}</p>
+                  </div>
+                )}
+                {detailMachine.ipmi_ip && (
+                  <div className="bg-gray-700/30 rounded-lg p-2 sm:p-3">
+                    <span className="text-gray-400 text-xs">IPMI IP:</span>
+                    <p className="text-white font-mono text-sm sm:text-base truncate">{detailMachine.ipmi_ip}</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Location & Model - 响应式网格 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {detailMachine.location && (
+                  <div className="bg-gray-700/30 rounded-lg p-2 sm:p-3">
+                    <span className="text-gray-400 text-xs">Location:</span>
+                    <p className="text-white text-sm sm:text-base truncate">{detailMachine.location}</p>
+                  </div>
+                )}
+                {detailMachine.model && (
+                  <div className="bg-gray-700/30 rounded-lg p-2 sm:p-3">
+                    <span className="text-gray-400 text-xs">Model:</span>
+                    <p className="text-white text-sm sm:text-base truncate">{detailMachine.model}</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Specs - 响应式设计 */}
+              <div>
+                <span className="text-gray-400 text-xs sm:text-sm block mb-2">Specifications:</span>
+                <div className="bg-gray-700/50 rounded-lg p-2 sm:p-3">
+                  {/* 小屏幕：垂直列表，大屏幕：网格布局 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                    <div className="flex justify-between sm:flex-col sm:gap-1 bg-gray-600/30 rounded p-2">
+                      <span className="text-gray-400 text-xs">GPU</span>
+                      <span className="text-white text-xs sm:text-sm font-medium truncate">{detailMachine.specs?.gpu || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between sm:flex-col sm:gap-1 bg-gray-600/30 rounded p-2">
+                      <span className="text-gray-400 text-xs">CPU</span>
+                      <span className="text-white text-xs sm:text-sm font-medium truncate">{detailMachine.specs?.cpu || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between sm:flex-col sm:gap-1 bg-gray-600/30 rounded p-2">
+                      <span className="text-gray-400 text-xs">RAM</span>
+                      <span className="text-white text-xs sm:text-sm font-medium truncate">{detailMachine.specs?.ram || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between sm:flex-col sm:gap-1 bg-gray-600/30 rounded p-2">
+                      <span className="text-gray-400 text-xs">Storage</span>
+                      <span className="text-white text-xs sm:text-sm font-medium truncate">{detailMachine.specs?.storage || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between sm:flex-col sm:gap-1 bg-gray-600/30 rounded p-2">
+                      <span className="text-gray-400 text-xs">Network</span>
+                      <span className="text-white text-xs sm:text-sm font-medium truncate">{detailMachine.specs?.network || 'N/A'}</span>
+                    </div>
+                    {detailMachine.maxSharedUsers && (
+                      <div className="flex justify-between sm:flex-col sm:gap-1 bg-cyan-600/20 rounded p-2">
+                        <span className="text-gray-400 text-xs">Max Users</span>
+                        <span className="text-cyan-400 text-xs sm:text-sm font-medium">{detailMachine.maxSharedUsers}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer - 固定在底部 */}
+            <div className="p-3 sm:p-4 border-t border-gray-700 shrink-0">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <button
+                  onClick={() => setShowMachineDetails(false)}
+                  className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition-colors text-sm sm:text-base"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedMachine(detailMachine)
+                    setShowMachineDetails(false)
+                  }}
+                  className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors text-sm sm:text-base"
+                >
+                  Select This Machine
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

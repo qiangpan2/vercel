@@ -1,0 +1,43 @@
+---
+# 检查服务器状态
+# 使用方式: ansible-playbook check_status.yml -e "target_machine=gpu-server-01"
+
+- name: Check server status
+  hosts: "{{ target_machine }}"
+  gather_facts: yes
+  
+  tasks:
+    - name: Get system uptime
+      command: uptime
+      register: uptime_result
+      changed_when: false
+      
+    - name: Get memory info
+      command: free -h
+      register: memory_result
+      changed_when: false
+      
+    - name: Get disk usage
+      command: df -h /
+      register: disk_result
+      changed_when: false
+      
+    - name: Get GPU info (if nvidia-smi available)
+      command: nvidia-smi --query-gpu=name,memory.total,memory.used,temperature.gpu --format=csv,noheader
+      register: gpu_result
+      changed_when: false
+      failed_when: false
+      
+    - name: Display system status
+      debug:
+        msg: |
+          === {{ inventory_hostname }} Status ===
+          Uptime: {{ uptime_result.stdout }}
+          
+          Memory:
+          {{ memory_result.stdout }}
+          
+          Disk:
+          {{ disk_result.stdout }}
+          
+          GPU: {{ gpu_result.stdout | default('N/A - nvidia-smi not available') }}

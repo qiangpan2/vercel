@@ -1,0 +1,32 @@
+---
+# IPMI 电源控制
+# 使用方式: ansible-playbook power_control.yml -e "target_machine=gpu-server-01 power_action=status"
+# power_action: on, off, reset, cycle, status
+
+- name: IPMI Power Control
+  hosts: "{{ target_machine }}"
+  gather_facts: no
+  
+  vars:
+    power_action: "{{ power_action | default('status') }}"
+    
+  tasks:
+    - name: Check if IPMI host is defined
+      fail:
+        msg: "IPMI host not configured for {{ target_machine }}"
+      when: ipmi_host is not defined or ipmi_host == ''
+      
+    - name: Execute IPMI power command
+      command: >
+        ipmitool -I lanplus 
+        -H {{ ipmi_host }} 
+        -U {{ ipmi_user | default('ADMIN') }} 
+        -P {{ ipmi_password }} 
+        power {{ power_action }}
+      register: ipmi_result
+      delegate_to: localhost
+      changed_when: power_action != 'status'
+      
+    - name: Display power status
+      debug:
+        msg: "Power {{ power_action }}: {{ ipmi_result.stdout }}"

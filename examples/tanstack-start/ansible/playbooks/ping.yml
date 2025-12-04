@@ -1,0 +1,16 @@
+---
+# 测试服务器连通性
+# 使用方式: ansible-playbook ping.yml -e "target_machine=gpu-server-01"
+
+- name: Ping target machine
+  hosts: "{{ target_machine }}"
+  gather_facts: no
+  
+  tasks:
+    - name: Ping the machine
+      ping:
+      register: ping_result
+      
+    - name: Display ping result
+      debug:
+        msg: "✅ {{ target_machine }} is reachable"

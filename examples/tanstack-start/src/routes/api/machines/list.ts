@@ -59,6 +59,7 @@ export const Route = createFileRoute('/api/machines/list')({
           
           return json({
             success: true,
+            servers: machines,
             machines: machines
           })
         } catch (error) {

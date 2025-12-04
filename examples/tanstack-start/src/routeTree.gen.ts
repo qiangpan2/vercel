@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MachinesRouteImport } from './routes/machines'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as CiRouteImport } from './routes/ci'
@@ -17,18 +18,28 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
 import { Route as DemoStartApiRequestRouteImport } from './routes/demo/start.api-request'
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
+import { Route as ApiMachinesUpdateRouteImport } from './routes/api/machines/update'
+import { Route as ApiMachinesSetMaintenanceRouteImport } from './routes/api/machines/set-maintenance'
 import { Route as ApiMachinesListRouteImport } from './routes/api/machines/list'
+import { Route as ApiMachinesDeleteRouteImport } from './routes/api/machines/delete'
 import { Route as ApiBookingsListRouteImport } from './routes/api/bookings/list'
 import { Route as ApiBookingsDeleteRouteImport } from './routes/api/bookings/delete'
 import { Route as ApiBookingsCreateRouteImport } from './routes/api/bookings/create'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAnsibleHealthCheckRouteImport } from './routes/api/ansible/health-check'
+import { Route as ApiAnsibleExecuteRouteImport } from './routes/api/ansible/execute'
 import { Route as DemoStartSsrIndexRouteImport } from './routes/demo/start.ssr.index'
 import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr.spa-mode'
 import { Route as DemoStartSsrFullSsrRouteImport } from './routes/demo/start.ssr.full-ssr'
 import { Route as DemoStartSsrDataOnlyRouteImport } from './routes/demo/start.ssr.data-only'
 
+const MachinesRoute = MachinesRouteImport.update({
+  id: '/machines',
+  path: '/machines',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -69,9 +80,25 @@ const DemoApiNamesRoute = DemoApiNamesRouteImport.update({
   path: '/demo/api/names',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMachinesUpdateRoute = ApiMachinesUpdateRouteImport.update({
+  id: '/api/machines/update',
+  path: '/api/machines/update',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMachinesSetMaintenanceRoute =
+  ApiMachinesSetMaintenanceRouteImport.update({
+    id: '/api/machines/set-maintenance',
+    path: '/api/machines/set-maintenance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiMachinesListRoute = ApiMachinesListRouteImport.update({
   id: '/api/machines/list',
   path: '/api/machines/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMachinesDeleteRoute = ApiMachinesDeleteRouteImport.update({
+  id: '/api/machines/delete',
+  path: '/api/machines/delete',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBookingsListRoute = ApiBookingsListRouteImport.update({
@@ -104,6 +131,16 @@ const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
   path: '/api/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAnsibleHealthCheckRoute = ApiAnsibleHealthCheckRouteImport.update({
+  id: '/api/ansible/health-check',
+  path: '/api/ansible/health-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnsibleExecuteRoute = ApiAnsibleExecuteRouteImport.update({
+  id: '/api/ansible/execute',
+  path: '/api/ansible/execute',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoStartSsrIndexRoute = DemoStartSsrIndexRouteImport.update({
   id: '/demo/start/ssr/',
   path: '/demo/start/ssr/',
@@ -131,13 +168,19 @@ export interface FileRoutesByFullPath {
   '/ci': typeof CiRoute
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
+  '/machines': typeof MachinesRoute
+  '/api/ansible/execute': typeof ApiAnsibleExecuteRoute
+  '/api/ansible/health-check': typeof ApiAnsibleHealthCheckRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
+  '/api/machines/set-maintenance': typeof ApiMachinesSetMaintenanceRoute
+  '/api/machines/update': typeof ApiMachinesUpdateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -152,13 +195,19 @@ export interface FileRoutesByTo {
   '/ci': typeof CiRoute
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
+  '/machines': typeof MachinesRoute
+  '/api/ansible/execute': typeof ApiAnsibleExecuteRoute
+  '/api/ansible/health-check': typeof ApiAnsibleHealthCheckRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
+  '/api/machines/set-maintenance': typeof ApiMachinesSetMaintenanceRoute
+  '/api/machines/update': typeof ApiMachinesUpdateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -174,13 +223,19 @@ export interface FileRoutesById {
   '/ci': typeof CiRoute
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
+  '/machines': typeof MachinesRoute
+  '/api/ansible/execute': typeof ApiAnsibleExecuteRoute
+  '/api/ansible/health-check': typeof ApiAnsibleHealthCheckRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
+  '/api/machines/set-maintenance': typeof ApiMachinesSetMaintenanceRoute
+  '/api/machines/update': typeof ApiMachinesUpdateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -197,13 +252,19 @@ export interface FileRouteTypes {
     | '/ci'
     | '/help'
     | '/login'
+    | '/machines'
+    | '/api/ansible/execute'
+    | '/api/ansible/health-check'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/machines/delete'
     | '/api/machines/list'
+    | '/api/machines/set-maintenance'
+    | '/api/machines/update'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -218,13 +279,19 @@ export interface FileRouteTypes {
     | '/ci'
     | '/help'
     | '/login'
+    | '/machines'
+    | '/api/ansible/execute'
+    | '/api/ansible/health-check'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/machines/delete'
     | '/api/machines/list'
+    | '/api/machines/set-maintenance'
+    | '/api/machines/update'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -239,13 +306,19 @@ export interface FileRouteTypes {
     | '/ci'
     | '/help'
     | '/login'
+    | '/machines'
+    | '/api/ansible/execute'
+    | '/api/ansible/health-check'
     | '/api/auth/login'
     | '/api/auth/logout'
     | '/api/auth/me'
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/machines/delete'
     | '/api/machines/list'
+    | '/api/machines/set-maintenance'
+    | '/api/machines/update'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -261,13 +334,19 @@ export interface RootRouteChildren {
   CiRoute: typeof CiRoute
   HelpRoute: typeof HelpRoute
   LoginRoute: typeof LoginRoute
+  MachinesRoute: typeof MachinesRoute
+  ApiAnsibleExecuteRoute: typeof ApiAnsibleExecuteRoute
+  ApiAnsibleHealthCheckRoute: typeof ApiAnsibleHealthCheckRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiBookingsCreateRoute: typeof ApiBookingsCreateRoute
   ApiBookingsDeleteRoute: typeof ApiBookingsDeleteRoute
   ApiBookingsListRoute: typeof ApiBookingsListRoute
+  ApiMachinesDeleteRoute: typeof ApiMachinesDeleteRoute
   ApiMachinesListRoute: typeof ApiMachinesListRoute
+  ApiMachinesSetMaintenanceRoute: typeof ApiMachinesSetMaintenanceRoute
+  ApiMachinesUpdateRoute: typeof ApiMachinesUpdateRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
@@ -279,6 +358,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/machines': {
+      id: '/machines'
+      path: '/machines'
+      fullPath: '/machines'
+      preLoaderRoute: typeof MachinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -335,11 +421,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoApiNamesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/machines/update': {
+      id: '/api/machines/update'
+      path: '/api/machines/update'
+      fullPath: '/api/machines/update'
+      preLoaderRoute: typeof ApiMachinesUpdateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/machines/set-maintenance': {
+      id: '/api/machines/set-maintenance'
+      path: '/api/machines/set-maintenance'
+      fullPath: '/api/machines/set-maintenance'
+      preLoaderRoute: typeof ApiMachinesSetMaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/machines/list': {
       id: '/api/machines/list'
       path: '/api/machines/list'
       fullPath: '/api/machines/list'
       preLoaderRoute: typeof ApiMachinesListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/machines/delete': {
+      id: '/api/machines/delete'
+      path: '/api/machines/delete'
+      fullPath: '/api/machines/delete'
+      preLoaderRoute: typeof ApiMachinesDeleteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bookings/list': {
@@ -384,6 +491,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ansible/health-check': {
+      id: '/api/ansible/health-check'
+      path: '/api/ansible/health-check'
+      fullPath: '/api/ansible/health-check'
+      preLoaderRoute: typeof ApiAnsibleHealthCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ansible/execute': {
+      id: '/api/ansible/execute'
+      path: '/api/ansible/execute'
+      fullPath: '/api/ansible/execute'
+      preLoaderRoute: typeof ApiAnsibleExecuteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo/start/ssr/': {
       id: '/demo/start/ssr/'
       path: '/demo/start/ssr'
@@ -421,13 +542,19 @@ const rootRouteChildren: RootRouteChildren = {
   CiRoute: CiRoute,
   HelpRoute: HelpRoute,
   LoginRoute: LoginRoute,
+  MachinesRoute: MachinesRoute,
+  ApiAnsibleExecuteRoute: ApiAnsibleExecuteRoute,
+  ApiAnsibleHealthCheckRoute: ApiAnsibleHealthCheckRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
   ApiBookingsCreateRoute: ApiBookingsCreateRoute,
   ApiBookingsDeleteRoute: ApiBookingsDeleteRoute,
   ApiBookingsListRoute: ApiBookingsListRoute,
+  ApiMachinesDeleteRoute: ApiMachinesDeleteRoute,
   ApiMachinesListRoute: ApiMachinesListRoute,
+  ApiMachinesSetMaintenanceRoute: ApiMachinesSetMaintenanceRoute,
+  ApiMachinesUpdateRoute: ApiMachinesUpdateRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,

@@ -1,6 +1,6 @@
 import { spawn } from 'child_process'
 import path from 'path'
-import { exitCode } from 'process'
+// import { exitCode } from 'process'
 
 export interface ExecResult {
   success: boolean

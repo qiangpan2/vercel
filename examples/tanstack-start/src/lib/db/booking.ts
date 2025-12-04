@@ -74,7 +74,7 @@ db.exec(`
     start_time INTEGER NOT NULL,  -- Unix timestamp (ms)
     end_time INTEGER NOT NULL,    -- Unix timestamp (ms)
     is_exclusive INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'active' CHECK(status IN ('active', 'cancelled', 'completed')),
+    status TEXT DEFAULT 'active' CHECK(status IN ('active', 'cancelled', 'completed', 'suspend')),
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
