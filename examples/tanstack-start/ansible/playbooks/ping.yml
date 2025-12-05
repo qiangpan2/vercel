@@ -1,16 +1,19 @@
 ---
-# 测试服务器连通性
-# 使用方式: ansible-playbook ping.yml -e "target_machine=gpu-server-01"
+# 测试服务器 SSH 连通性
+# 前端调用：点击 "Ping" 按钮
+# 
+# 使用方式：
+#   ansible-playbook -i inventory/hosts.yml playbooks/ping.yml -e "target_machine=cse-ai-3"
 
-- name: Ping target machine
-  hosts: "{{ target_machine }}"
+- name: Test SSH connectivity
+  hosts: "{{ target_machine | default('all') }}"
   gather_facts: no
   
   tasks:
-    - name: Ping the machine
-      ping:
+    - name: Ping the machine via SSH
+      ansible.builtin.ping:
       register: ping_result
       
-    - name: Display ping result
-      debug:
-        msg: "✅ {{ target_machine }} is reachable"
+    - name: Show success message
+      ansible.builtin.debug:
+        msg: "✅ {{ inventory_hostname }} ({{ ansible_host }}) is reachable via SSH"

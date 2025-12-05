@@ -1,34 +1,60 @@
 ---
-# 撤销用户访问权限
-# 使用方式: ansible-playbook revoke_access.yml -e "target_machine=cse-ai-1 sso_username=zhangsan access_group=machine-access-cse-ai-1"
+# 撤销用户 SSH 访问权限
+# 前端调用：前端调用：预定到期或手动撤销时执行，输入用户名，点击 "Revoke Access" 按钮
+#
+# 使用方式：
+#   ansible-playbook playbooks/revoke_access.yml -e "target_machine=cse-ai-3 sso_username=testuser"
 
-- name: Revoke SSO user access from machine
+- name: Revoke SSH access from user
   hosts: "{{ target_machine }}"
   become: yes
+  
   vars:
-    sso_username: "{{ sso_username }}"
-    access_group: "{{ access_group }}"
+    whitelist_file: "/opt/coresw_svr_book_mgr/ldap_user_whitelist"
     
   tasks:
-    - name: Remove user from access group
-      command: >
-        gpasswd -d {{ sso_username }} {{ access_group }}
-      register: result
-      failed_when: false
-      changed_when: result.rc == 0
+    - name: Validate username
+      ansible.builtin.fail:
+        msg: "ntid is required"
+      when: ntid is not defined or ntid == ''
       
-    - name: Verify user was removed
-      command: groups {{ sso_username }}
-      register: user_groups
+    - name: Check if user has access
+      ansible.builtin.shell: grep -q "^{{ ntid }}$" {{ whitelist_file }} && echo "exists" || echo "not_exists"
+      register: user_check
       changed_when: false
       failed_when: false
       
-    - name: Display user groups
-      debug:
-        msg: "User {{ sso_username }} groups: {{ user_groups.stdout }}"
-      when: user_groups.rc == 0
+    - name: Remove user from whitelist
+      ansible.builtin.lineinfile:
+        path: "{{ whitelist_file }}"
+        line: "{{ ntid }}"
+        state: absent
+      when: user_check.stdout == "exists"
+      
+    # 参考原系统：终止用户的所有进程
+    - name: Terminate user's processes
+      ansible.builtin.shell: |
+        # 发送警告消息
+        echo "Your booking has expired!" | write {{ ntid }} 2>/dev/null || true
         
-    - name: Log access revocation
-      debug:
-        msg: "🔒 Access revoked for {{ sso_username }} on {{ target_machine }} from group {{ access_group }}"
-
+        # 等待 3 秒让用户保存
+        sleep 3
+        
+        # 先 SIGTERM
+        pkill -u {{ ntid }} 2>/dev/null || true
+        sleep 2
+        
+        # 再 SIGKILL 确保清理
+        pkill -9 -u {{ ntid }} 2>/dev/null || true
+      when: user_check.stdout == "exists"
+      failed_when: false
+      
+    - name: Display result
+      ansible.builtin.debug:
+        msg: |
+          {% if user_check.stdout == "not_exists" %}
+          ℹ️  User '{{ ntid }}' did not have access to {{ inventory_hostname }}
+          {% else %}
+          ✅ User '{{ ntid }}' access has been revoked from {{ inventory_hostname }}
+          ⚠️  User's active sessions have been terminated
+          {% endif %}

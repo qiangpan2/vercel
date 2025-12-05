@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
 import db from '../../../lib/db/booking'
-
+import { executeAnsible } from '../../../lib/utils/execAnsible'
+import { scheduleBookingStart, scheduleBookingEnd } from '../../../lib/booking/timer'
 
 // POST /api/bookings/create
 export const Route = createFileRoute('/api/bookings/create')({
@@ -11,7 +12,7 @@ export const Route = createFileRoute('/api/bookings/create')({
         try {
           const body = await request.json()
           const { 
-            machineId,  // 前端传 machineId
+            machineId,
             startTime, 
             endTime, 
             ntid, 
@@ -30,7 +31,16 @@ export const Route = createFileRoute('/api/bookings/create')({
             }, { status: 400 })
           }
           
-          // 确保用户存在（如果不存在则创建）
+          // 获取机器名称（用于 Ansible）
+          const machine = db.prepare('SELECT hostname FROM servers WHERE id = ?').get(machineId) as { hostname: string } | undefined
+          if (!machine) {
+            return json({ 
+              success: false, 
+              error: 'Machine not found' 
+            }, { status: 404 })
+          }
+
+          // 确保用户存在
           const existingUser = db.prepare('SELECT ntid FROM users WHERE ntid = ?').get(ntid)
           if (!existingUser) {
             db.prepare(`
@@ -40,7 +50,7 @@ export const Route = createFileRoute('/api/bookings/create')({
             console.log('[API] Created new user:', ntid)
           }
           
-          // 检查时间冲突（对于独占预订）
+          // 检查时间冲突（独占预订）
           if (isExclusive) {
             const conflicts = db.prepare(`
               SELECT id FROM bookings
@@ -68,12 +78,57 @@ export const Route = createFileRoute('/api/bookings/create')({
             VALUES (?, ?, ?, ?, ?, ?, 'active')
           `).run(machineId, ntid, reason || null, startTime, endTime, isExclusive ? 1 : 0)
           
-          console.log('[API] Booking created with ID:', result.lastInsertRowid)
+          const bookingId = result.lastInsertRowid
+          console.log('[API] Booking created with ID:', bookingId)
           
+          // ========== 关键逻辑 ==========
+          const now = Date.now()
+          const isActiveNow = startTime <= now && endTime > now
+          
+          if (isActiveNow) {
+            // 预定时间包含"现在" → 立即授权
+            const hasExistingAccess = db.prepare(`
+              SELECT id FROM bookings
+              WHERE server_id = ? AND ntid = ? AND status = 'active'
+                AND start_time <= ? AND end_time > ? AND id != ?
+            `).get(machineId, ntid, now, now, bookingId)
+            
+            if (!hasExistingAccess) {
+              console.log('[API] Booking is active now, granting access immediately')
+              await executeAnsible('grant_access.yml', {
+                target_machine: machine.hostname,
+                ntid: ntid
+              })
+            } else {
+              console.log('[API] User already has access from another booking')
+            }
+          } else {
+            // 预定是未来时间 → 设置精准定时器
+            console.log('[API] Booking is in the future, setting timer')
+            scheduleBookingStart(
+              bookingId,
+              machine.hostname,
+              ntid,
+              machineId,
+              startTime
+            )
+          }
+          
+          // 设置结束定时器
+          scheduleBookingEnd(
+            bookingId,
+            machine.hostname,
+            ntid,
+            machineId,
+            endTime
+          )
+
           return json({
             success: true,
-            bookingId: String(result.lastInsertRowid),
-            message: 'Booking created successfully'
+            bookingId: String(bookingId),
+            message: isActiveNow 
+              ? 'Booking created and access granted immediately' 
+              : `Booking created, access will be granted at ${new Date(startTime).toLocaleString()}`
           })
         } catch (error) {
           console.error('[API] Create booking error:', error)

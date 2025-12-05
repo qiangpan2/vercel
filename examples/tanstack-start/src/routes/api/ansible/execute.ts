@@ -35,7 +35,9 @@ export const Route = createFileRoute('/api/ansible/execute')({
             'check_status.yml'
           ]
           
-          if (!allowedPlaybooks.includes(playbook)) {
+          const normalizedPlaybook = playbook.replace(/^playbooks\//, '')
+
+          if (!allowedPlaybooks.includes(normalizedPlaybook)) {
             return json({ 
               success: false, 
               error: `Playbook not allowed: ${playbook}` 

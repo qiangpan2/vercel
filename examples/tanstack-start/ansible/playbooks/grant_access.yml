@@ -1,37 +1,59 @@
 ---
-# 授予用户访问权限
-# 使用方式: ansible-playbook grant_access.yml -e "target_machine=cse-ai-1 sso_username=zhangsan access_group=machine-access-cse-ai-1"
+# 授予用户 SSH 访问权限
+# 前端调用：预定成功后自动执行
+#
+# 使用方式：
+#   ansible-playbook playbooks/grant_access.yml -e "target_machine=poc-server ntid=users"
 
-- name: Grant SSO user access to machine
+- name: Grant SSH access to user
   hosts: "{{ target_machine }}"
   become: yes
+  
   vars:
-    sso_username: "{{ sso_username }}"
-    access_group: "{{ access_group }}"
+    whitelist_file: "/opt/coresw_svr_book_mgr/ldap_user_whitelist"
+    # LDAP 用户组（所有 NTID 用户都属于这个组）
+    ldap_group: "DomainUsers"
     
   tasks:
-    - name: Ensure access group exists
-      group:
-        name: "{{ access_group }}"
-        state: present
-        
-    - name: Add user to access group
-      command: >
-        usermod -a -G {{ access_group }} {{ sso_username }}
-      register: result
-      changed_when: result.rc == 0
-      failed_when: result.rc != 0 and 'does not exist' not in result.stderr
+    - name: Validate username
+      ansible.builtin.fail:
+        msg: "ntid is required"
+      when: ntid is not defined or ntid == ''
       
-    - name: Verify user was added to group
-      command: groups {{ sso_username }}
-      register: user_groups
+    - name: Ensure whitelist directory exists
+      ansible.builtin.file:
+        path: "{{ whitelist_file | dirname }}"
+        state: directory
+        mode: '0755'
+        
+    - name: Ensure whitelist file exists
+      ansible.builtin.file:
+        path: "{{ whitelist_file }}"
+        state: touch
+        mode: '0644'
       changed_when: false
       
-    - name: Display user groups
-      debug:
-        msg: "User {{ sso_username }} is now in groups: {{ user_groups.stdout }}"
-        
-    - name: Log access grant
-      debug:
-        msg: "✅ Access granted to {{ sso_username }} on {{ target_machine }} via group {{ access_group }}"
-
+    - name: Check if user already has access
+      ansible.builtin.shell: grep -q "^{{ ntid }}$" {{ whitelist_file }} && echo "exists" || echo "not_exists"
+      register: user_check
+      changed_when: false
+      
+    - name: Add user to whitelist
+      ansible.builtin.lineinfile:
+        path: "{{ whitelist_file }}"
+        line: "{{ ntid }}"
+        state: present
+      when: user_check.stdout == "not_exists"
+      
+    - name: Display result
+      ansible.builtin.debug:
+        msg: |
+          {% if user_check.stdout == "exists" %}
+          ℹ️  User '{{ ntid }}' already has access to {{ inventory_hostname }}
+          {% else %}
+          ✅ User '{{ ntid }}' has been granted access to {{ inventory_hostname }}
+          {% endif %}
+          
+          🔑 User can now connect via:
+             ssh {{ ntid }}@{{ inventory_hostname }}
+             (Use your LDAP/NTID password)

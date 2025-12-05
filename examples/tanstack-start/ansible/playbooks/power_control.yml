@@ -1,7 +1,12 @@
 ---
 # IPMI 电源控制
-# 使用方式: ansible-playbook power_control.yml -e "target_machine=gpu-server-01 power_action=status"
-# power_action: on, off, reset, cycle, status
+# 前端调用：点击 Power On/Off/Reset/Status 按钮
+#
+# 使用方式：
+#   ansible-playbook playbooks/power_control.yml -e "target_machine=gpu-server-01 power_action=status"
+#
+# 参数：
+#   - power_action: on | off | reset | cycle | status
 
 - name: IPMI Power Control
   hosts: "{{ target_machine }}"
@@ -11,22 +16,35 @@
     power_action: "{{ power_action | default('status') }}"
     
   tasks:
-    - name: Check if IPMI host is defined
-      fail:
-        msg: "IPMI host not configured for {{ target_machine }}"
+    - name: Check if IPMI is configured
+      ansible.builtin.fail:
+        msg: "IPMI not configured for {{ inventory_hostname }}. ipmi_host is not defined."
       when: ipmi_host is not defined or ipmi_host == ''
       
-    - name: Execute IPMI power command
-      command: >
+    - name: Validate power action
+      ansible.builtin.fail:
+        msg: "Invalid power_action: {{ power_action }}. Must be one of: on, off, reset, cycle, status"
+      when: power_action not in ['on', 'off', 'reset', 'cycle', 'status']
+      
+    - name: Execute IPMI command
+      ansible.builtin.command: >
         ipmitool -I lanplus 
         -H {{ ipmi_host }} 
         -U {{ ipmi_user | default('ADMIN') }} 
-        -P {{ ipmi_password }} 
+        -P {{ ipmi_password | default('') }}
         power {{ power_action }}
       register: ipmi_result
-      delegate_to: localhost
+      delegate_to: localhost  # 在本地执行 IPMI 命令
       changed_when: power_action != 'status'
       
     - name: Display power status
-      debug:
-        msg: "Power {{ power_action }}: {{ ipmi_result.stdout }}"
+      ansible.builtin.debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════╗
+          ║                    IPMI POWER CONTROL                        ║
+          ╠══════════════════════════════════════════════════════════════╣
+          ║ Server: {{ inventory_hostname }}
+          ║ IPMI Host: {{ ipmi_host }}
+          ║ Action: {{ power_action }}
+          ║ Result: {{ ipmi_result.stdout }}
+          ╚══════════════════════════════════════════════════════════════╝

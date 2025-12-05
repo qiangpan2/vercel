@@ -37,11 +37,6 @@ export async function executeAnsible(
     if (targetHost) {
       args.push('--limit', targetHost)
     }
-    
-    // 添加额外变量
-    for (const [key, value] of Object.entries(extraVars)) {
-      args.push('-e', `${key}=${value}`)
-    }
 
     console.log(`[Ansible] Executing: ansible-playbook ${args.join(' ')}`)
     
@@ -62,17 +57,25 @@ export async function executeAnsible(
       console.error(`[Ansible stderr] ${data}`)
     })
     
+    // 添加超时处理
+    const timer = setTimeout(() => {
+      proc.kill()
+      resolve({ success: false, output: stdout, error: 'Timeout', exitCode: -1 })
+    }, timeout)
+
     proc.on('close', (code) => {
+      clearTimeout(timer)
       if (code === 0) {
         resolve({ success: true, output: stdout, error: '', exitCode: 0 })
       } else {
-        resolve({ success: false, output: stdout, error: stderr, exitCode: code || -1})
+        resolve({ success: false, output: stdout, error: stderr, exitCode: code || -1 })
       }
     })
     
     proc.on('error', (err) => {
+      clearTimeout(timer)
       console.error(`[Ansible] Process error:`, err)
-      resolve({ success: false, output: '', error: err.message , exitCode: -1 })
+      resolve({ success: false, output: '', error: err.message, exitCode: -1 })
     })
   })
 }
@@ -84,7 +87,7 @@ export async function grantUserAccess(
 ): Promise<ExecResult> {
   return executeAnsible(
     'grant_access.yml',
-    { target_user: username, target_machine: targetHost },
+    { ntid: username, target_machine: targetHost },
     targetHost
   )
 }
@@ -96,7 +99,7 @@ export async function revokeUserAccess(
 ): Promise<ExecResult> {
   return executeAnsible(
     'revoke_access.yml',
-    { target_user: username, target_machine: targetHost },
+    { ntid: username, target_machine: targetHost },
     targetHost
   )
 }

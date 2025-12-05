@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { restoreAllTimers } from '../booking/timer'
 
 // 获取当前文件所在目录
 const __filename = fileURLToPath(import.meta.url);
@@ -10,20 +11,41 @@ const __dirname = path.dirname(__filename);
 const dbPath = path.join(__dirname, '../../../data/booking.db');
 //const dbPath = path.join(process.cwd(), 'booking.db');
 
-import fs from 'fs';
-// 打印路径用于调试
-console.log('[booking.ts] __dirname:', __dirname);
-console.log('[booking.ts] Database path:', dbPath);
-console.log('[booking.ts] File exists:', fs.existsSync(dbPath));
+// import fs from 'fs';
+// // 打印路径用于调试
+// console.log('[booking.ts] __dirname:', __dirname);
+// console.log('[booking.ts] Database path:', dbPath);
+// console.log('[booking.ts] File exists:', fs.existsSync(dbPath));
 
-// 确保 data 目录存在
-const dataDir = path.dirname(dbPath);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-  console.log('[booking.ts] Created data directory:', dataDir);
-}
+// // 确保 data 目录存在
+// const dataDir = path.dirname(dbPath);
+// if (!fs.existsSync(dataDir)) {
+//   fs.mkdirSync(dataDir, { recursive: true });
+//   console.log('[booking.ts] Created data directory:', dataDir);
+// }
 
 const db = new Database(dbPath);
+
+// 服务启动时恢复定时器（只执行一次）
+let timerInitialized = false
+
+export function initTimers() {
+  if (timerInitialized) return
+  
+  try {
+    console.log('[DB] Initializing booking timers...')
+    restoreAllTimers()
+    timerInitialized = true
+  } catch (error) {
+    console.error('[DB] Failed to initialize timers:', error)
+  }
+}
+
+// 在模块加载时自动初始化
+// 延迟一点确保数据库连接就绪
+setTimeout(() => {
+  initTimers()
+}, 1000)
 
 // 启用外键约束
 db.pragma('foreign_keys = ON');
@@ -61,6 +83,9 @@ db.exec(`
     is_exclusive INTEGER DEFAULT 0,
     status TEXT DEFAULT 'available' CHECK(status IN ('available', 'maintenance', 'offline')),
     description TEXT,
+    ssh_user TEXT DEFAULT 'root',
+    ipmi_password TEXT DEFAULT '',
+    previous_status TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
   );

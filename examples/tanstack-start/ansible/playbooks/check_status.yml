@@ -1,43 +1,74 @@
 ---
-# 检查服务器状态
-# 使用方式: ansible-playbook check_status.yml -e "target_machine=gpu-server-01"
+# 获取服务器详细状态
+# 前端调用：点击 "Full Status" 按钮
+#
+# 使用方式：
+#   ansible-playbook -i inventory/hosts.yml playbooks/check_status.yml -e "target_machine=cse-ai-3"
 
 - name: Check server status
   hosts: "{{ target_machine }}"
   gather_facts: yes
+  become: no  # 不需要 sudo
   
   tasks:
+    - name: Get hostname
+      ansible.builtin.command: hostname
+      register: hostname_result
+      changed_when: false
+      
     - name: Get system uptime
-      command: uptime
+      ansible.builtin.command: uptime -p
       register: uptime_result
       changed_when: false
       
     - name: Get memory info
-      command: free -h
+      ansible.builtin.shell: free -h | head -2
       register: memory_result
       changed_when: false
       
     - name: Get disk usage
-      command: df -h /
+      ansible.builtin.shell: df -h / | tail -1
       register: disk_result
       changed_when: false
       
-    - name: Get GPU info (if nvidia-smi available)
-      command: nvidia-smi --query-gpu=name,memory.total,memory.used,temperature.gpu --format=csv,noheader
+    - name: Get CPU info
+      ansible.builtin.shell: cat /proc/cpuinfo | grep "model name" | head -1 | cut -d':' -f2
+      register: cpu_result
+      changed_when: false
+      
+    - name: Check GPU (nvidia-smi)
+      ansible.builtin.shell: nvidia-smi --query-gpu=name,memory.total,memory.used,utilization.gpu --format=csv,noheader 2>/dev/null || echo "No NVIDIA GPU or driver not installed"
       register: gpu_result
       changed_when: false
       failed_when: false
       
-    - name: Display system status
-      debug:
+    - name: Check GPU (rocm-smi for AMD)
+      ansible.builtin.shell: rocm-smi --showproductname 2>/dev/null || echo "No AMD GPU or ROCm not installed"
+      register: amd_gpu_result
+      changed_when: false
+      failed_when: false
+      
+    - name: Get logged in users
+      ansible.builtin.shell: who | wc -l
+      register: users_result
+      changed_when: false
+      
+    - name: Display status summary
+      ansible.builtin.debug:
         msg: |
-          === {{ inventory_hostname }} Status ===
-          Uptime: {{ uptime_result.stdout }}
-          
-          Memory:
-          {{ memory_result.stdout }}
-          
-          Disk:
-          {{ disk_result.stdout }}
-          
-          GPU: {{ gpu_result.stdout | default('N/A - nvidia-smi not available') }}
+          ╔══════════════════════════════════════════════════════════════╗
+          ║                    SERVER STATUS REPORT                       ║
+          ╠══════════════════════════════════════════════════════════════╣
+          ║ Hostname: {{ hostname_result.stdout }}
+          ║ IP: {{ ansible_host }}
+          ║ Uptime: {{ uptime_result.stdout }}
+          ╠══════════════════════════════════════════════════════════════╣
+          ║ CPU: {{ cpu_result.stdout | trim }}
+          ║ Memory: {{ memory_result.stdout_lines[1] | default('N/A') }}
+          ║ Disk (/): {{ disk_result.stdout }}
+          ╠══════════════════════════════════════════════════════════════╣
+          ║ NVIDIA GPU: {{ gpu_result.stdout }}
+          ║ AMD GPU: {{ amd_gpu_result.stdout }}
+          ╠══════════════════════════════════════════════════════════════╣
+          ║ Logged in users: {{ users_result.stdout }}
+          ╚══════════════════════════════════════════════════════════════╝
