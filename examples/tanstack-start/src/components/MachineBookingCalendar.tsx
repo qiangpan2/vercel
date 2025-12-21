@@ -26,6 +26,7 @@ interface Booking {
   userName: string
   startTime: number
   endTime: number
+  status?: string
 }
 
 // 更新 User 接口以匹配实际数据
@@ -35,13 +36,14 @@ interface User {
   role: 'viewer' | 'developer' | 'admin' | 'user'
   displayName: string
   email?: string
+  timezone?: string
 }
 
 interface MachineBookingCalendarProps {
   machine: Machine
   bookings: Booking[]
-  onBooking: (machineId: string, startTime: Date, endTime: Date) => void
-  onDeleteBooking: (bookingId: string) => void
+  onBooking: (machineId: string, start: Date, end: Date) => void
+  onDeleteBooking: (bookingId: string) => Promise<void>
   currentUser: User | null
 }
 
@@ -51,8 +53,11 @@ interface CalendarEvent extends BigCalendarEvent {
   start: Date
   end: Date
   resource: {
-    booking: Booking
+    booking: Booking | null
     isCurrentUser: boolean
+    isPending?: boolean
+    pendingStatus?: 'loading' | 'success' | 'error'
+    isDeleting?: boolean
   }
 }
 
@@ -82,20 +87,25 @@ const isAdminUser = (user: User | null): boolean => {
 // Configure date-fns localizer without locale (uses English by default)
 // Helper function to format date and time
 const formatDateTime = (date: Date, type: 'full' | 'time' | 'short') => {
-  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
   
   if (type === 'full') {
-    return `${weekdays[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
+    return new Intl.DateTimeFormat('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    }).format(date)
   } else if (type === 'time') {
     const hours = date.getHours()
     const minutes = date.getMinutes()
     const ampm = hours >= 12 ? 'PM' : 'AM'
-    const displayHours = hours % 12 || 12
+    const displayHours = hours === 0 ? 0 : (hours % 12 || 12)
     return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`
   } else {
-    const shortMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    return `${shortMonths[date.getMonth()]} ${date.getDate()}`
+    return new Intl.DateTimeFormat('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    }).format(date)
   }
 }
 
@@ -117,6 +127,16 @@ export default function MachineBookingCalendar({
   const [view, setView] = useState<View>('week')
   const [date, setDate] = useState(new Date())
 
+  // pending booking 状态
+  const [pendingBooking, setPendingBooking] = useState<{
+    start: Date
+    end: Date
+    status: 'loading' | 'success' | 'error'
+  } | null>(null)
+
+  // deleting booking 状态
+  const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null)
+
   const [bookingDialog, setBookingDialog] = useState<BookingDialogState>({
     isOpen: false,
     start: null,
@@ -131,19 +151,49 @@ export default function MachineBookingCalendar({
   // 获取当前用户 ID
   const currentUserId = getUserId(currentUser)
 
+  // 获取当前用户时区，默认为浏览器时区
+  const displayTimezone = currentUser?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+
+
   // Convert bookings to calendar events
   const events: CalendarEvent[] = useMemo(() => {
-    return bookings.map(booking => ({
-      id: booking.id,
-      title: booking.userName,
-      start: new Date(booking.startTime),
-      end: new Date(booking.endTime),
-      resource: {
-        booking,
-        isCurrentUser: currentUserId ? booking.userId === currentUserId : false
+    const bookingEvents: CalendarEvent[] = bookings.map(booking => {
+      // 新增：判断是否正在删除
+      const isDeleting = booking.id === deletingBookingId
+
+      return {
+        id: booking.id,
+        // 如果正在删除，修改标题
+        title: isDeleting ? 'Deleting...' : booking.userName,
+        start: new Date(booking.startTime),
+        end: new Date(booking.endTime),
+        resource: {
+          booking,
+          isCurrentUser: currentUserId ? booking.userId === currentUserId : false,
+          isPending: false,
+          isDeleting // 传入状态
+        }
       }
-    }))
-  }, [bookings, currentUserId])
+    })
+    // 添加 pending booking 到日历显示
+    if (pendingBooking) {
+      bookingEvents.push({
+        id: 'pending-booking',
+        title: pendingBooking.status === 'loading' ? '⏳ Booking...' : 
+               pendingBooking.status === 'error' ? '❌ Failed' : '✓ Booked',
+        start: pendingBooking.start,
+        end: pendingBooking.end,
+        resource: {
+          booking: null,
+          isCurrentUser: true,
+          isPending: true,
+          pendingStatus: pendingBooking.status
+        }
+      })
+    }
+    
+    return bookingEvents
+  }, [bookings, currentUserId, pendingBooking, deletingBookingId])
 
   // Handle selecting a time slot
   const handleSelectSlot = useCallback((slotInfo: SlotInfo) => {
@@ -159,7 +209,8 @@ export default function MachineBookingCalendar({
     }
     
     const now = new Date()
-    if (slotInfo.start < now) {
+    const half_hour_ago = new Date(now.getTime() - 30 * 60 * 1000)
+    if (slotInfo.start < half_hour_ago) {
       alert('Cannot book past time slots')
       return
     }
@@ -180,18 +231,73 @@ export default function MachineBookingCalendar({
   }, [])
 
   // Create a new booking
-  const handleCreateBooking = () => {
+  const handleCreateBooking = async () => {
     if (bookingDialog.start && bookingDialog.end) {
-      onBooking(machine.id, bookingDialog.start, bookingDialog.end)
+      // 关闭对话框
+      const start = bookingDialog.start
+      const end = bookingDialog.end
       setBookingDialog({ isOpen: false, start: null, end: null })
+      
+      // 设置 pending 状态
+      setPendingBooking({
+        start,
+        end,
+        status: 'loading'
+      })
+
+      try {
+        // 调用父组件的预订函数（需要修改为返回 Promise）
+        await onBooking(machine.id, start, end)
+        
+        // 成功后短暂显示成功状态，然后清除（因为真实预订会加载进来）
+        setPendingBooking({
+          start,
+          end,
+          status: 'success'
+        })
+        
+        // 1秒后清除 pending 状态
+        setTimeout(() => {
+          setPendingBooking(null)
+        }, 1000)
+      } catch (error) {
+        // 显示错误状态
+        setPendingBooking({
+          start,
+          end,
+          status: 'error'
+        })
+        
+        // 3秒后清除错误状态
+        setTimeout(() => {
+          setPendingBooking(null)
+        }, 3000)
+      }
     }
   }
 
   // Delete a booking
-  const handleDeleteBooking = () => {
+  const handleDeleteBooking = async () => {
     if (bookingDetailDialog.booking) {
-      onDeleteBooking(bookingDetailDialog.booking.id)
+      const bookingId = bookingDetailDialog.booking.id
+      
+      // 1. 关闭弹窗
       setBookingDetailDialog({ isOpen: false, booking: null })
+      
+      // 2. 设置正在删除状态
+      setDeletingBookingId(bookingId)
+
+      try {
+        // 3. 等待删除完成
+        await onDeleteBooking(bookingId)
+        // 成功后，bookings 列表更新，该事件会自动消失，无需手动清除状态
+        setDeletingBookingId(null)
+      } catch (error) {
+        console.error('Delete failed', error)
+        alert('Failed to delete booking')
+        // 4. 失败则恢复显示
+        setDeletingBookingId(null)
+      }
     }
   }
 
@@ -203,25 +309,105 @@ export default function MachineBookingCalendar({
   }
 
   // Custom event style
-  const eventStyleGetter = (event: CalendarEvent) => {
-    const isCurrentUser = event.resource.isCurrentUser
-    
+  const eventStyleGetter = useCallback((event: CalendarEvent) => {
+    const { isCurrentUser, isPending, pendingStatus, isDeleting, booking } = event.resource
+
+    const isPast = booking ? new Date(booking.endTime) < new Date() : false
+    // 已完成预订（灰色，低透明度）
+    if (booking && booking.status === 'completed' || isPast) {
+      return {
+        style: {
+          backgroundColor: '#374151', // gray-700
+          borderColor: '#4b5563',     // gray-600
+          color: '#9ca3af',           // gray-400
+          opacity: 0.6,
+          borderStyle: 'dashed'       // 可选：虚线边框表示过去式
+        }
+      }
+    }
+    // deleting状态样式
+    if (isDeleting) {
+      return {
+        style: {
+          backgroundColor: '#6b7280', // 灰色
+          borderColor: '#4b5563',
+          color: '#e5e7eb',
+          opacity: 0.7,
+          cursor: 'wait',
+          animation: 'pulse 1.5s infinite'
+        }
+      }
+    }
+
+    // Pending booking 样式
+    if (isPending) {
+      if (pendingStatus === 'loading') {
+        return {
+          style: {
+            backgroundColor: '#fbbf24', // 黄色
+            borderColor: '#f59e0b',
+            color: '#1f2937',
+            animation: 'pulse 1.5s infinite'
+          }
+        }
+      } else if (pendingStatus === 'error') {
+        return {
+          style: {
+            backgroundColor: '#ef4444',
+            borderColor: '#dc2626',
+            color: 'white'
+          }
+        }
+      } else {
+        return {
+          style: {
+            backgroundColor: '#10b981',
+            borderColor: '#059669',
+            color: 'white'
+          }
+        }
+      }
+    }
+
+    // 正常预订样式
     return {
       style: {
         backgroundColor: isCurrentUser ? '#0891b2' : '#9333ea',
-        borderColor: isCurrentUser ? '#06b6d4' : '#a855f7',
+        borderColor: isCurrentUser ? '#0e7490' : '#7e22ce',
         color: 'white',
-        borderRadius: '6px',
-        border: '2px solid',
-        fontSize: '12px',
-        fontWeight: '500',
-        padding: '2px 6px',
       }
     }
-  }
+  }, [])
 
   // Custom event component
   const EventComponent = ({ event }: { event: CalendarEvent }) => {
+    const { booking, isCurrentUser, isPending, pendingStatus, isDeleting } = event.resource
+
+    // deleting状态显示
+    if (isDeleting) {
+      return (
+        <div className="flex items-center gap-1 text-xs p-1 animate-pulse">
+          <span>🗑️</span>
+          <span>Deleting...</span>
+        </div>
+      )
+    }
+
+    // Pending booking 显示
+    if (isPending) {
+      return (
+        <div className={`flex items-center gap-1 text-xs p-1 ${pendingStatus === 'loading' ? 'animate-pulse' : ''}`}>
+          {pendingStatus === 'loading' && (
+            <>
+              <span>⏳</span>
+              <span>Booking...</span>
+            </>
+          )}
+          {pendingStatus === 'error' && <span>❌ Failed</span>}
+          {pendingStatus === 'success' && <span>✓ Booked</span>}
+        </div>
+      )
+    }
     return (
       <div className="truncate">
         <div className="font-medium">{event.title}</div>
@@ -235,7 +421,8 @@ export default function MachineBookingCalendar({
   // Prevent selecting non-available machines
   const slotPropGetter = useCallback((date: Date) => {
     const now = new Date()
-    const isPast = date < now
+    const half_hour_ago = new Date(now.getTime() - 30 * 60 * 1000)
+    const isPast = date < half_hour_ago
     
     if (isPast || machine.status !== 'available') {
       return {
@@ -267,6 +454,11 @@ export default function MachineBookingCalendar({
         </div>
         {/* Legend - 移到 header 右侧 */}
         <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-1.5 text-gray-400 bg-gray-800/80 px-2 py-1 rounded border border-gray-600">
+            <Clock size={12} />
+            <span>{displayTimezone}</span>
+          </div>
+
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 bg-cyan-600 rounded"></div>
             <span className="text-gray-400">You</span>
@@ -296,6 +488,7 @@ export default function MachineBookingCalendar({
             onSelectEvent={handleSelectEvent}
             eventPropGetter={eventStyleGetter}
             slotPropGetter={slotPropGetter}
+            showMultiDayTimes={true}
             components={{
               event: EventComponent,
             }}
@@ -308,7 +501,7 @@ export default function MachineBookingCalendar({
                 const hours = date.getHours()
                 const minutes = date.getMinutes()
                 const ampm = hours >= 12 ? 'PM' : 'AM'
-                const displayHours = hours % 12 || 12
+                const displayHours = hours === 0 ? 0 : (hours % 12 || 12)
                 return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`
               },
               eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) => {
@@ -337,7 +530,7 @@ export default function MachineBookingCalendar({
         </div>
       </div>
 
-      {/* Booking Dialog - 保持原样 */}
+      {/* Booking Dialog */}
       {bookingDialog.isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-gray-800 rounded-xl border border-gray-700 p-6 max-w-md w-full mx-4">
@@ -359,60 +552,41 @@ export default function MachineBookingCalendar({
 
               {bookingDialog.start && bookingDialog.end && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Date</label>
-                    <input
-                      type="date"
-                      value={bookingDialog.start.toISOString().split('T')[0]}
-                      onChange={(e) => {
-                        if (!bookingDialog.start || !bookingDialog.end) return
-                        const newDate = new Date(e.target.value)
-                        const newStart = new Date(bookingDialog.start)
-                        const newEnd = new Date(bookingDialog.end)
-                        newStart.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate())
-                        newEnd.setFullYear(newDate.getFullYear(), newDate.getMonth(), newDate.getDate())
-                        setBookingDialog({ ...bookingDialog, start: newStart, end: newEnd })
-                      }}
-                      className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">Start Time</label>
                       <input
-                        type="time"
-                        value={`${bookingDialog.start.getHours().toString().padStart(2, '0')}:${bookingDialog.start.getMinutes().toString().padStart(2, '0')}`}
-                        step="1800"
+                        type="datetime-local"
+                        // 处理时区偏移，确保显示本地时间
+                        value={new Date(bookingDialog.start.getTime() - bookingDialog.start.getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                         onChange={(e) => {
-                          if (!bookingDialog.start || !bookingDialog.end) return
-                          const [hours, minutes] = e.target.value.split(':').map(Number)
-                          const newStart = new Date(bookingDialog.start)
-                          newStart.setHours(hours, minutes, 0, 0)
-                          let newEnd = new Date(bookingDialog.end)
-                          if (newStart >= newEnd) {
-                            newEnd = new Date(newStart)
-                            newEnd.setMinutes(newStart.getMinutes() + 30)
+                          if (!e.target.value) return
+                          const newStart = new Date(e.target.value)
+                          
+                          // 如果新的开始时间晚于或等于结束时间，自动将结束时间推后1小时
+                          let newEnd = bookingDialog.end
+                          if (newEnd && newStart >= newEnd) {
+                            newEnd = new Date(newStart.getTime() + 60 * 60 * 1000)
                           }
-                          setBookingDialog({ ...bookingDialog, start: newStart, end: newEnd })
+                          
+                          setBookingDialog(prev => ({ ...prev, start: newStart, end: newEnd }))
                         }}
                         className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                       />
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">End Time</label>
                       <input
-                        type="time"
-                        value={`${bookingDialog.end.getHours().toString().padStart(2, '0')}:${bookingDialog.end.getMinutes().toString().padStart(2, '0')}`}
-                        step="1800"
+                        type="datetime-local"
+                        // 处理时区偏移
+                        value={new Date(bookingDialog.end.getTime() - bookingDialog.end.getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                        // 最小值限制为开始时间
+                        min={new Date(bookingDialog.start.getTime() - bookingDialog.start.getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                         onChange={(e) => {
-                          if (!bookingDialog.start || !bookingDialog.end) return
-                          const [hours, minutes] = e.target.value.split(':').map(Number)
-                          const newEnd = new Date(bookingDialog.end)
-                          newEnd.setHours(hours, minutes, 0, 0)
-                          if (newEnd > bookingDialog.start) {
-                            setBookingDialog({ ...bookingDialog, end: newEnd })
-                          }
+                          if (!e.target.value) return
+                          const newEnd = new Date(e.target.value)
+                          setBookingDialog(prev => ({ ...prev, end: newEnd }))
                         }}
                         className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                       />

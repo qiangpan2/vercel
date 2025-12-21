@@ -45,21 +45,23 @@ export const Route = createFileRoute('/api/bookings/delete')({
             }, { status: 404 })
           }
           
-          if (booking.status !== 'active') {
+          if (booking.status !== 'active' && booking.status !== 'completed') {
             return json({ 
               success: false, 
-              error: 'Booking is not active' 
+              error: 'Booking is not active or completed' 
             }, { status: 400 })
           }
           
           // 取消这个预定的定时器
-          cancelBookingTimers(bookingId)
+          if (booking.status === 'active') {
+            cancelBookingTimers(bookingId)
+          }
           
           // 将状态改为 cancelled
           const result = db.prepare(`
             UPDATE bookings 
             SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND status = 'active'
+            WHERE id = ?
           `).run(bookingId)
           
           if (result.changes === 0) {
@@ -71,6 +73,13 @@ export const Route = createFileRoute('/api/bookings/delete')({
           
           console.log('[API] Booking cancelled:', bookingId)
           
+          if (booking.status === 'completed') {
+            return json({
+              success: true,
+              message: 'Booking history deleted'
+            })
+          }
+
           // ========== 检查是否需要撤销权限 ==========
           const now = Date.now()
           

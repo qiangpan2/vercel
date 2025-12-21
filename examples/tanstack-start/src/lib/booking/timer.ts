@@ -207,8 +207,8 @@ export function restoreAllTimers() {
     SELECT b.id, b.ntid, b.server_id, b.start_time, b.end_time, s.hostname as machine_hostname
     FROM bookings b
     JOIN servers s ON b.server_id = s.id
-    WHERE b.status = 'active' AND b.end_time > ?
-  `).all(now) as Array<{
+    WHERE b.status = 'active'
+  `).all() as Array<{
     id: number
     ntid: string
     server_id: number
@@ -216,8 +216,29 @@ export function restoreAllTimers() {
     end_time: number
     machine_hostname: string
   }>
-  
+
+  // 添加：统计信息
+  let futureStarts = 0
+  let activeNow = 0
+  let expiredFound = 0
+
   for (const booking of activeBookings) {
+    // 检查是否已过期（服务宕机期间过期的预订）
+    if (booking.end_time <= now) {
+      console.log(`[Timer] Booking ${booking.id} expired while service was down. Cleaning up...`)
+      expiredFound++
+      
+      // 立即执行结束逻辑（清理权限 + 更新状态）
+      // 注意：handleBookingEnd 是 async 的，这里不 await 以免阻塞启动流程，让它在后台执行
+      handleBookingEnd(
+        booking.id,
+        booking.machine_hostname,
+        booking.ntid,
+        booking.server_id
+      ).catch(err => console.error(`[Timer] Failed to cleanup expired booking ${booking.id}:`, err))
+      
+      continue // 跳过后续定时器设置
+    }
     // 如果开始时间在未来，设置开始定时器
     if (booking.start_time > now) {
       scheduleBookingStart(
@@ -227,6 +248,10 @@ export function restoreAllTimers() {
         booking.server_id,
         booking.start_time
       )
+      futureStarts++
+    } else {
+      // 预订已经开始，记录为活跃
+      activeNow++
     }
     
     // 设置结束定时器
@@ -240,6 +265,10 @@ export function restoreAllTimers() {
   }
   
   console.log(`[Timer] Restored ${activeBookings.length} booking timers`)
+  console.log(`[Timer]   - Currently active: ${activeNow}`)
+  console.log(`[Timer]   - Starting later: ${futureStarts}`)
+  console.log(`[Timer]   - Expired & Cleaned: ${expiredFound}`)
+
 }
 
 /**

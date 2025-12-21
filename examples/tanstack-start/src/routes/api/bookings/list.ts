@@ -27,7 +27,7 @@ export const Route = createFileRoute('/api/bookings/list')({
               u.display_name
             FROM bookings b
             LEFT JOIN users u ON b.ntid = u.ntid
-            WHERE b.status = 'active'
+            WHERE b.status != 'cancelled'
           `
           const params: any[] = []
           

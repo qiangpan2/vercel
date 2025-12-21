@@ -1,0 +1,39 @@
+---
+# 撤销所有非管理员用户的 SSH 访问权限
+# 用于服务关闭时的批量清理
+#
+# 使用方式：
+#   ansible-playbook playbooks/revoke_all_except_admins.yml -e "target_machine=cse-ai-3 admin_users=admin1,admin2"
+
+- name: Revoke all non-admin SSH access
+  hosts: "{{ target_machine }}"
+  become: yes
+  
+  vars:
+    whitelist_file: "/opt/coresw_svr_book_mgr/ldap_user_whitelist"
+    admin_list: "{{ admin_users | default('') | split(',') }}"
+    
+  tasks:
+    - name: Check if whitelist file exists
+      ansible.builtin.stat:
+        path: "{{ whitelist_file }}"
+      register: whitelist_stat
+      
+    - name: Read current whitelist
+      ansible.builtin.shell: cat {{ whitelist_file }}
+      register: current_users
+      when: whitelist_stat.stat.exists
+      changed_when: false
+      
+    - name: Create new whitelist with only admins
+      ansible.builtin.copy:
+        content: "{{ admin_list | select | join('\n') }}\n"
+        dest: "{{ whitelist_file }}"
+        mode: '0644'
+      when: whitelist_stat.stat.exists
+      
+    - name: Display result
+      ansible.builtin.debug:
+        msg: |
+          🔒 Whitelist cleaned up on {{ inventory_hostname }}
+          📋 Kept admin users: {{ admin_list | join(', ') }}

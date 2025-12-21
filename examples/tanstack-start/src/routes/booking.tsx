@@ -129,6 +129,7 @@ function BookingPage() {
             userName: b.displayName || b.userName || b.display_name,
             startTime: b.startTime || b.start_time,
             endTime: b.endTime || b.end_time,
+            status: b.status,
           }))
           
           setLocalBookings(formattedBookings)
@@ -160,8 +161,10 @@ function BookingPage() {
   }
 
   // ...保留原来的其他函数和 JSX...
-  const handleBooking = async (machineId: string, startTime: Date, endTime: Date) => {
-    if (!user) return
+  const handleBooking = async (machineId: string, startTime: Date, endTime: Date): Promise<void> => {
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
     
     try {
       const response = await fetch('/api/bookings/create', {
@@ -178,6 +181,10 @@ function BookingPage() {
       
       const data = await response.json()
       
+    if (!data.success) {
+      throw new Error(data.error || 'Booking failed')
+    }
+
       if (data.success) {
         const newBooking: Booking = {
           id: data.bookingId || `booking-${Date.now()}`,

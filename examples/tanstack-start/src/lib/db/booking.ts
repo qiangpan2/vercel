@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { restoreAllTimers } from '../booking/timer'
+import { handleStartup, registerShutdownHandlers } from '../booking/restart_hold'
+
 
 // 获取当前文件所在目录
 const __filename = fileURLToPath(import.meta.url);
@@ -30,7 +32,10 @@ const db = new Database(dbPath);
 let timerInitialized = false
 
 export function initTimers() {
-  if (timerInitialized) return
+  if (timerInitialized) {
+    console.log('[booking.ts] Timers already initialized, skipping')
+    return
+  }
   
   try {
     console.log('[DB] Initializing booking timers...')
@@ -41,10 +46,34 @@ export function initTimers() {
   }
 }
 
+// 添加生命周期初始化函数
+let lifecycleInitialized = false
+export async function initLifecycle() {
+  if (lifecycleInitialized) {
+    console.log('[booking.ts] Lifecycle already initialized, skipping')
+    return
+  }
+  lifecycleInitialized = true
+  
+  console.log('[booking.ts] Initializing service restore_hold...')
+  
+  // 1. 注册关闭处理器
+  registerShutdownHandlers()
+  
+  // 2. 恢复当前有效预订的权限
+  await handleStartup()
+}
+
 // 在模块加载时自动初始化
 // 延迟一点确保数据库连接就绪
-setTimeout(() => {
+setTimeout(async () => {
   initTimers()
+  // 稍微延迟启动生命周期管理，确保定时器先恢复
+  setTimeout(() => {
+    initLifecycle().catch(err => {
+      console.error('[booking.ts] Lifecycle init error:', err)
+    })
+  }, 2000)
 }, 1000)
 
 // 启用外键约束
