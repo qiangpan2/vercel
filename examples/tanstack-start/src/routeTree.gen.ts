@@ -19,7 +19,6 @@ import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.se
 import { Route as DemoStartApiRequestRouteImport } from './routes/demo/start.api-request'
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
 import { Route as ApiMachinesUpdateRouteImport } from './routes/api/machines/update'
-import { Route as ApiMachinesSetMaintenanceRouteImport } from './routes/api/machines/set-maintenance'
 import { Route as ApiMachinesListRouteImport } from './routes/api/machines/list'
 import { Route as ApiMachinesDeleteRouteImport } from './routes/api/machines/delete'
 import { Route as ApiBookingsListRouteImport } from './routes/api/bookings/list'
@@ -85,12 +84,6 @@ const ApiMachinesUpdateRoute = ApiMachinesUpdateRouteImport.update({
   path: '/api/machines/update',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiMachinesSetMaintenanceRoute =
-  ApiMachinesSetMaintenanceRouteImport.update({
-    id: '/api/machines/set-maintenance',
-    path: '/api/machines/set-maintenance',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiMachinesListRoute = ApiMachinesListRouteImport.update({
   id: '/api/machines/list',
   path: '/api/machines/list',
@@ -179,7 +172,6 @@ export interface FileRoutesByFullPath {
   '/api/bookings/list': typeof ApiBookingsListRoute
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
-  '/api/machines/set-maintenance': typeof ApiMachinesSetMaintenanceRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
@@ -187,7 +179,7 @@ export interface FileRoutesByFullPath {
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
-  '/demo/start/ssr': typeof DemoStartSsrIndexRoute
+  '/demo/start/ssr/': typeof DemoStartSsrIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -206,7 +198,6 @@ export interface FileRoutesByTo {
   '/api/bookings/list': typeof ApiBookingsListRoute
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
-  '/api/machines/set-maintenance': typeof ApiMachinesSetMaintenanceRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
@@ -234,7 +225,6 @@ export interface FileRoutesById {
   '/api/bookings/list': typeof ApiBookingsListRoute
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
-  '/api/machines/set-maintenance': typeof ApiMachinesSetMaintenanceRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
@@ -263,7 +253,6 @@ export interface FileRouteTypes {
     | '/api/bookings/list'
     | '/api/machines/delete'
     | '/api/machines/list'
-    | '/api/machines/set-maintenance'
     | '/api/machines/update'
     | '/demo/api/names'
     | '/demo/start/api-request'
@@ -271,7 +260,7 @@ export interface FileRouteTypes {
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
-    | '/demo/start/ssr'
+    | '/demo/start/ssr/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -290,7 +279,6 @@ export interface FileRouteTypes {
     | '/api/bookings/list'
     | '/api/machines/delete'
     | '/api/machines/list'
-    | '/api/machines/set-maintenance'
     | '/api/machines/update'
     | '/demo/api/names'
     | '/demo/start/api-request'
@@ -317,7 +305,6 @@ export interface FileRouteTypes {
     | '/api/bookings/list'
     | '/api/machines/delete'
     | '/api/machines/list'
-    | '/api/machines/set-maintenance'
     | '/api/machines/update'
     | '/demo/api/names'
     | '/demo/start/api-request'
@@ -345,7 +332,6 @@ export interface RootRouteChildren {
   ApiBookingsListRoute: typeof ApiBookingsListRoute
   ApiMachinesDeleteRoute: typeof ApiMachinesDeleteRoute
   ApiMachinesListRoute: typeof ApiMachinesListRoute
-  ApiMachinesSetMaintenanceRoute: typeof ApiMachinesSetMaintenanceRoute
   ApiMachinesUpdateRoute: typeof ApiMachinesUpdateRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
@@ -428,13 +414,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMachinesUpdateRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/machines/set-maintenance': {
-      id: '/api/machines/set-maintenance'
-      path: '/api/machines/set-maintenance'
-      fullPath: '/api/machines/set-maintenance'
-      preLoaderRoute: typeof ApiMachinesSetMaintenanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/machines/list': {
       id: '/api/machines/list'
       path: '/api/machines/list'
@@ -508,7 +487,7 @@ declare module '@tanstack/react-router' {
     '/demo/start/ssr/': {
       id: '/demo/start/ssr/'
       path: '/demo/start/ssr'
-      fullPath: '/demo/start/ssr'
+      fullPath: '/demo/start/ssr/'
       preLoaderRoute: typeof DemoStartSsrIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -553,7 +532,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBookingsListRoute: ApiBookingsListRoute,
   ApiMachinesDeleteRoute: ApiMachinesDeleteRoute,
   ApiMachinesListRoute: ApiMachinesListRoute,
-  ApiMachinesSetMaintenanceRoute: ApiMachinesSetMaintenanceRoute,
   ApiMachinesUpdateRoute: ApiMachinesUpdateRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,

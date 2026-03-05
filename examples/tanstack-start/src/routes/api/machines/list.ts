@@ -16,6 +16,7 @@ export const Route = createFileRoute('/api/machines/list')({
               hostname,
               ip,
               ipmi_ip,
+	      ssh_user,
               domain_name,
               location,
               model,
@@ -51,6 +52,7 @@ export const Route = createFileRoute('/api/machines/list')({
             maxSharedUsers: s.is_exclusive ? 1 : 4,
             ip: s.ip,
             ipmi_ip: s.ipmi_ip,
+	    ssh_user: s.ssh_user,
             location: s.location,
             model: s.model
           }))
