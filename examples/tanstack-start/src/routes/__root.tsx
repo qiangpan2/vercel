@@ -3,6 +3,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import Header from '../components/Header'
+import ChatWidget from '../components/ChatWidget'
 
 import appCss from '../styles.css?url'
 
@@ -40,6 +41,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <Header />
         {children}
+        {/* Floating AI chat bubble — only renders in the browser when a user is logged in */}
+        <ChatWidget />
         <TanStackDevtools
           config={{
             position: 'bottom-right',
