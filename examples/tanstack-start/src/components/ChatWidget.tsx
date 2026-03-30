@@ -14,10 +14,110 @@ import { useGateway, type UseGatewayReturn } from '../lib/chat/useGateway'
 import { getCurrentUser } from '../utils/auth'
 import { MessageSquare, X, Send, Loader2, AlertCircle, WifiOff } from 'lucide-react'
 import type { GatewayMessage } from '../lib/chat/gateway-client'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+
+// ---------------------------------------------------------------------------
+// Markdown rendering constants (hoisted to avoid recreating on every render)
+// ---------------------------------------------------------------------------
+
+const REMARK_PLUGINS = [remarkGfm]
+
+const MARKDOWN_COMPONENTS = {
+  code({ className, children, ...props }: any) {
+    const match = /language-(\w+)/.exec(className || '')
+    return match ? (
+      <SyntaxHighlighter
+        style={oneDark}
+        language={match[1]}
+        PreTag="div"
+        customStyle={{ fontSize: '12px', borderRadius: '8px', margin: '8px 0', padding: '12px' }}
+      >
+        {String(children).replace(/\n$/, '')}
+      </SyntaxHighlighter>
+    ) : (
+      <code className="bg-gray-600 px-1 py-0.5 rounded text-xs font-mono" {...props}>
+        {children}
+      </code>
+    )
+  },
+  img({ src, alt }: any) {
+    return (
+      <img
+        src={src}
+        alt={alt ?? ''}
+        loading="lazy"
+        className="max-w-full rounded-lg my-2 border border-gray-600"
+        style={{ maxHeight: '300px', objectFit: 'contain' }}
+      />
+    )
+  },
+  p({ children }: any) {
+    return <p className="mb-2 last:mb-0">{children}</p>
+  },
+  ul({ children }: any) {
+    return <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>
+  },
+  ol({ children }: any) {
+    return <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>
+  },
+  strong({ children }: any) {
+    return <strong className="font-semibold text-white">{children}</strong>
+  },
+  h1({ children }: any) {
+    return <h1 className="font-bold text-white text-base mb-1 mt-2">{children}</h1>
+  },
+  h2({ children }: any) {
+    return <h2 className="font-bold text-white text-sm mb-1 mt-2">{children}</h2>
+  },
+  h3({ children }: any) {
+    return <h3 className="font-semibold text-white text-sm mb-1 mt-2">{children}</h3>
+  },
+  h4({ children }: any) {
+    return <h4 className="font-semibold text-white text-xs mb-1 mt-2">{children}</h4>
+  },
+  h5({ children }: any) {
+    return <h5 className="font-semibold text-gray-300 text-xs mb-1 mt-2">{children}</h5>
+  },
+  h6({ children }: any) {
+    return <h6 className="font-medium text-gray-400 text-xs mb-1 mt-1">{children}</h6>
+  },
+  a({ href, children }: any) {
+    return <a href={href} className="text-cyan-400 underline" target="_blank" rel="noopener noreferrer">{children}</a>
+  },
+  blockquote({ children }: any) {
+    return <blockquote className="border-l-2 border-cyan-500 pl-3 text-gray-400 italic my-2">{children}</blockquote>
+  },
+  table({ children }: any) {
+    return (
+      <div className="overflow-x-auto my-2">
+        <table className="text-xs border-collapse w-full">{children}</table>
+      </div>
+    )
+  },
+  th({ children }: any) {
+    return <th className="border border-gray-600 px-2 py-1 text-left font-semibold">{children}</th>
+  },
+  td({ children }: any) {
+    return <td className="border border-gray-600 px-2 py-1">{children}</td>
+  },
+}
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
+
+// --- MarkdownMessage -------------------------------------------------------
+
+function MarkdownMessage({ content }: { content: string }) {
+  return (
+    <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MARKDOWN_COMPONENTS}>
+      {content}
+    </ReactMarkdown>
+  )
+}
 
 // --- MessageList -----------------------------------------------------------
 
@@ -51,16 +151,17 @@ function MessageList({ messages, stream }: MessageListProps) {
 
       {messages.map((msg, i) => {
         const isUser = msg.role === 'user'
+        const text = extractText(msg)
         return (
           <div key={i} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap break-words ${
+              className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm break-words ${
                 isUser
-                  ? 'bg-cyan-600 text-white rounded-br-sm'
+                  ? 'bg-cyan-600 text-white rounded-br-sm whitespace-pre-wrap'
                   : 'bg-gray-700 text-gray-100 rounded-bl-sm'
               }`}
             >
-              {extractText(msg)}
+              {isUser ? text : <MarkdownMessage content={text} />}
             </div>
           </div>
         )
@@ -69,8 +170,8 @@ function MessageList({ messages, stream }: MessageListProps) {
       {/* In-progress streaming text */}
       {stream !== null && (
         <div className="flex justify-start">
-          <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 text-sm whitespace-pre-wrap break-words bg-gray-700 text-gray-100">
-            {stream.length > 0 ? stream : <Loader2 className="w-4 h-4 animate-spin" />}
+          <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-3 py-2 text-sm break-words bg-gray-700 text-gray-100">
+            {stream.length > 0 ? <MarkdownMessage content={stream} /> : <Loader2 className="w-4 h-4 animate-spin" />}
           </div>
         </div>
       )}
@@ -146,6 +247,55 @@ interface ChatPanelProps {
 function ChatPanel({ gateway, onClose }: ChatPanelProps) {
   const { connected, messages, stream, sendMessage, error } = gateway
   const [sendError, setSendError] = useState<string | null>(null)
+  const [size, setSize] = useState({ width: 384, height: 512 })
+  const dragRef = useRef<{ type: 'width' | 'height'; startX: number; startY: number; startW: number; startH: number } | null>(null)
+  // Store handlers in refs so document listeners always call the stable reference
+  const handlersRef = useRef<{ move: (e: MouseEvent) => void; up: () => void } | null>(null)
+
+  function startResizeWidth(e: React.MouseEvent) {
+    e.preventDefault()
+    dragRef.current = { type: 'width', startX: e.clientX, startY: e.clientY, startW: size.width, startH: size.height }
+    attachDragListeners()
+  }
+
+  function startResizeHeight(e: React.MouseEvent) {
+    e.preventDefault()
+    dragRef.current = { type: 'height', startX: e.clientX, startY: e.clientY, startW: size.width, startH: size.height }
+    attachDragListeners()
+  }
+
+  function attachDragListeners() {
+    function onMouseMove(e: MouseEvent) {
+      const d = dragRef.current
+      if (!d) return
+      if (d.type === 'width') {
+        const newW = Math.min(Math.max(d.startW - (e.clientX - d.startX), 280), Math.min(800, window.innerWidth * 0.9))
+        setSize(s => ({ ...s, width: newW }))
+      } else {
+        const newH = Math.min(Math.max(d.startH - (e.clientY - d.startY), 360), Math.min(700, window.innerHeight * 0.85))
+        setSize(s => ({ ...s, height: newH }))
+      }
+    }
+    function onMouseUp() {
+      dragRef.current = null
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      handlersRef.current = null
+    }
+    handlersRef.current = { move: onMouseMove, up: onMouseUp }
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }
+
+  // Cleanup on unmount in case mouse is released outside
+  useEffect(() => {
+    return () => {
+      if (handlersRef.current) {
+        document.removeEventListener('mousemove', handlersRef.current.move)
+        document.removeEventListener('mouseup', handlersRef.current.up)
+      }
+    }
+  }, [])
 
   async function handleSend(text: string) {
     setSendError(null)
@@ -157,7 +307,20 @@ function ChatPanel({ gateway, onClose }: ChatPanelProps) {
   }
 
   return (
-    <div className="flex flex-col bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 w-80 h-[28rem] overflow-hidden">
+    <div
+      className="flex flex-col bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden relative"
+      style={{ width: size.width, height: size.height }}
+    >
+      {/* 上边缘拖拽句柄（调整高度） */}
+      <div
+        onMouseDown={startResizeHeight}
+        className="absolute top-0 left-0 right-0 h-1.5 cursor-ns-resize hover:bg-cyan-500/40 z-10 rounded-t-2xl"
+      />
+      {/* 左边缘拖拽句柄（调整宽度） */}
+      <div
+        onMouseDown={startResizeWidth}
+        className="absolute top-0 left-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-cyan-500/40 z-10 rounded-l-2xl"
+      />
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
         <div className="flex items-center gap-2">

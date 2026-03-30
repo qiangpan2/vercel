@@ -38,9 +38,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="h-screen flex flex-col overflow-hidden">
         <Header />
-        {children}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {children}
+        </div>
         {/* Floating AI chat bubble — only renders in the browser when a user is logged in */}
         <ChatWidget />
         <TanStackDevtools

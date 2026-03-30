@@ -210,7 +210,7 @@ export class GatewayClient {
       minProtocol: 3,
       maxProtocol: 3,
       client: {
-        id: 'control-ui',
+        id: 'webchat-ui',
         version: 'chatwidget-v1',
         platform: 'web',
         mode: 'webchat',

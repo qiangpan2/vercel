@@ -255,9 +255,9 @@ function BookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="h-full bg-gray-900 flex flex-col overflow-hidden">
       {/* Header - 更紧凑 */}
-      <header className="px-4 py-3 border-b border-gray-800">
+      <header className="px-4 py-3 border-b border-gray-800 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold text-white">Machine Booking</h1>
@@ -288,7 +288,7 @@ function BookingPage() {
       </header>
 
       {/* Main Content - 减少 padding，全宽 */}
-      <div className="p-2">
+      <div className="flex-1 min-h-0 overflow-hidden p-2 flex flex-col">
         {/* 如果没有机器，显示提示 */}
         {machines.length === 0 ? (
           <div className="bg-yellow-500/20 border border-yellow-500 rounded-xl p-6 text-center">
@@ -297,10 +297,10 @@ function BookingPage() {
             <p className="text-gray-500 text-sm mt-2">Try: curl http://localhost:3000/api/machines/list</p>
           </div>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-1 min-h-0">
             {/* Machine List - 固定宽度，更窄 */}
             <div className="w-48 flex-shrink-0">
-              <div className="bg-gray-800/50 backdrop-blur-lg rounded-lg border border-gray-700 p-2">
+              <div className="bg-gray-800/50 backdrop-blur-lg rounded-lg border border-gray-700 p-2 h-full overflow-y-auto">
                 <h2 className="text-sm font-semibold text-gray-400 mb-2 px-2">Machines ({machines.length})</h2>
                 <div className="space-y-1">
                   {machines.map((machine) => (
@@ -336,7 +336,7 @@ function BookingPage() {
             </div>
 
             {/* Calendar - 占据剩余空间 */}
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 min-h-0">
               {selectedMachine ? (
                 <Suspense fallback={
                   <div className="bg-gray-800/50 backdrop-blur-lg rounded-lg border border-gray-700 p-8 text-center">
@@ -362,9 +362,6 @@ function BookingPage() {
         )}
       </div>
       
-    {/* </div>
-  )
-} */}
       {/* Machine Details Modal - 响应式设计 */}
       {showMachineDetails && detailMachine && (
         <div 

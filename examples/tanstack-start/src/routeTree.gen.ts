@@ -21,6 +21,9 @@ import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
 import { Route as ApiMachinesUpdateRouteImport } from './routes/api/machines/update'
 import { Route as ApiMachinesListRouteImport } from './routes/api/machines/list'
 import { Route as ApiMachinesDeleteRouteImport } from './routes/api/machines/delete'
+import { Route as ApiCalendarMachinesRouteImport } from './routes/api/calendar/machines'
+import { Route as ApiCalendarEventsRouteImport } from './routes/api/calendar/events'
+import { Route as ApiCalendarAvailabilityRouteImport } from './routes/api/calendar/availability'
 import { Route as ApiBookingsListRouteImport } from './routes/api/bookings/list'
 import { Route as ApiBookingsDeleteRouteImport } from './routes/api/bookings/delete'
 import { Route as ApiBookingsCreateRouteImport } from './routes/api/bookings/create'
@@ -29,10 +32,6 @@ import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAnsibleHealthCheckRouteImport } from './routes/api/ansible/health-check'
 import { Route as ApiAnsibleExecuteRouteImport } from './routes/api/ansible/execute'
-import { Route as ApiCalendarEventsRouteImport } from './routes/api/calendar/events'
-import { Route as ApiCalendarEventsIdRouteImport } from './routes/api/calendar/events.$id'
-import { Route as ApiCalendarMachinesRouteImport } from './routes/api/calendar/machines'
-import { Route as ApiCalendarAvailabilityRouteImport } from './routes/api/calendar/availability'
 import { Route as DemoStartSsrIndexRouteImport } from './routes/demo/start.ssr.index'
 import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr.spa-mode'
 import { Route as DemoStartSsrFullSsrRouteImport } from './routes/demo/start.ssr.full-ssr'
@@ -98,6 +97,21 @@ const ApiMachinesDeleteRoute = ApiMachinesDeleteRouteImport.update({
   path: '/api/machines/delete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCalendarMachinesRoute = ApiCalendarMachinesRouteImport.update({
+  id: '/api/calendar/machines',
+  path: '/api/calendar/machines',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCalendarEventsRoute = ApiCalendarEventsRouteImport.update({
+  id: '/api/calendar/events',
+  path: '/api/calendar/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCalendarAvailabilityRoute = ApiCalendarAvailabilityRouteImport.update({
+  id: '/api/calendar/availability',
+  path: '/api/calendar/availability',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBookingsListRoute = ApiBookingsListRouteImport.update({
   id: '/api/bookings/list',
   path: '/api/bookings/list',
@@ -138,26 +152,6 @@ const ApiAnsibleExecuteRoute = ApiAnsibleExecuteRouteImport.update({
   path: '/api/ansible/execute',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCalendarEventsRoute = ApiCalendarEventsRouteImport.update({
-  id: '/api/calendar/events',
-  path: '/api/calendar/events',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCalendarEventsIdRoute = ApiCalendarEventsIdRouteImport.update({
-  id: '/api/calendar/events/$id',
-  path: '/api/calendar/events/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCalendarMachinesRoute = ApiCalendarMachinesRouteImport.update({
-  id: '/api/calendar/machines',
-  path: '/api/calendar/machines',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCalendarAvailabilityRoute = ApiCalendarAvailabilityRouteImport.update({
-  id: '/api/calendar/availability',
-  path: '/api/calendar/availability',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DemoStartSsrIndexRoute = DemoStartSsrIndexRouteImport.update({
   id: '/demo/start/ssr/',
   path: '/demo/start/ssr/',
@@ -194,20 +188,19 @@ export interface FileRoutesByFullPath {
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
+  '/api/calendar/events': typeof ApiCalendarEventsRoute
+  '/api/calendar/machines': typeof ApiCalendarMachinesRoute
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
-  '/api/calendar/events': typeof ApiCalendarEventsRoute
-  '/api/calendar/events/$id': typeof ApiCalendarEventsIdRoute
-  '/api/calendar/machines': typeof ApiCalendarMachinesRoute
-  '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
-  '/demo/start/ssr/': typeof DemoStartSsrIndexRoute
+  '/demo/start/ssr': typeof DemoStartSsrIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -224,13 +217,12 @@ export interface FileRoutesByTo {
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
+  '/api/calendar/events': typeof ApiCalendarEventsRoute
+  '/api/calendar/machines': typeof ApiCalendarMachinesRoute
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
-  '/api/calendar/events': typeof ApiCalendarEventsRoute
-  '/api/calendar/events/$id': typeof ApiCalendarEventsIdRoute
-  '/api/calendar/machines': typeof ApiCalendarMachinesRoute
-  '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -255,13 +247,12 @@ export interface FileRoutesById {
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
+  '/api/calendar/events': typeof ApiCalendarEventsRoute
+  '/api/calendar/machines': typeof ApiCalendarMachinesRoute
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
-  '/api/calendar/events': typeof ApiCalendarEventsRoute
-  '/api/calendar/events/$id': typeof ApiCalendarEventsIdRoute
-  '/api/calendar/machines': typeof ApiCalendarMachinesRoute
-  '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -287,20 +278,19 @@ export interface FileRouteTypes {
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/calendar/availability'
+    | '/api/calendar/events'
+    | '/api/calendar/machines'
     | '/api/machines/delete'
     | '/api/machines/list'
     | '/api/machines/update'
-    | '/api/calendar/events'
-    | '/api/calendar/events/$id'
-    | '/api/calendar/machines'
-    | '/api/calendar/availability'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
-    | '/demo/start/ssr/'
+    | '/demo/start/ssr'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -317,13 +307,12 @@ export interface FileRouteTypes {
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/calendar/availability'
+    | '/api/calendar/events'
+    | '/api/calendar/machines'
     | '/api/machines/delete'
     | '/api/machines/list'
     | '/api/machines/update'
-    | '/api/calendar/events'
-    | '/api/calendar/events/$id'
-    | '/api/calendar/machines'
-    | '/api/calendar/availability'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -347,13 +336,12 @@ export interface FileRouteTypes {
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/calendar/availability'
+    | '/api/calendar/events'
+    | '/api/calendar/machines'
     | '/api/machines/delete'
     | '/api/machines/list'
     | '/api/machines/update'
-    | '/api/calendar/events'
-    | '/api/calendar/events/$id'
-    | '/api/calendar/machines'
-    | '/api/calendar/availability'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -378,13 +366,12 @@ export interface RootRouteChildren {
   ApiBookingsCreateRoute: typeof ApiBookingsCreateRoute
   ApiBookingsDeleteRoute: typeof ApiBookingsDeleteRoute
   ApiBookingsListRoute: typeof ApiBookingsListRoute
+  ApiCalendarAvailabilityRoute: typeof ApiCalendarAvailabilityRoute
+  ApiCalendarEventsRoute: typeof ApiCalendarEventsRoute
+  ApiCalendarMachinesRoute: typeof ApiCalendarMachinesRoute
   ApiMachinesDeleteRoute: typeof ApiMachinesDeleteRoute
   ApiMachinesListRoute: typeof ApiMachinesListRoute
   ApiMachinesUpdateRoute: typeof ApiMachinesUpdateRoute
-  ApiCalendarEventsRoute: typeof ApiCalendarEventsRoute
-  ApiCalendarEventsIdRoute: typeof ApiCalendarEventsIdRoute
-  ApiCalendarMachinesRoute: typeof ApiCalendarMachinesRoute
-  ApiCalendarAvailabilityRoute: typeof ApiCalendarAvailabilityRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
@@ -480,6 +467,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMachinesDeleteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/calendar/machines': {
+      id: '/api/calendar/machines'
+      path: '/api/calendar/machines'
+      fullPath: '/api/calendar/machines'
+      preLoaderRoute: typeof ApiCalendarMachinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/events': {
+      id: '/api/calendar/events'
+      path: '/api/calendar/events'
+      fullPath: '/api/calendar/events'
+      preLoaderRoute: typeof ApiCalendarEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/availability': {
+      id: '/api/calendar/availability'
+      path: '/api/calendar/availability'
+      fullPath: '/api/calendar/availability'
+      preLoaderRoute: typeof ApiCalendarAvailabilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/bookings/list': {
       id: '/api/bookings/list'
       path: '/api/bookings/list'
@@ -536,38 +544,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnsibleExecuteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/calendar/events': {
-      id: '/api/calendar/events'
-      path: '/api/calendar/events'
-      fullPath: '/api/calendar/events'
-      preLoaderRoute: typeof ApiCalendarEventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/calendar/events/$id': {
-      id: '/api/calendar/events/$id'
-      path: '/api/calendar/events/$id'
-      fullPath: '/api/calendar/events/$id'
-      preLoaderRoute: typeof ApiCalendarEventsIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/calendar/machines': {
-      id: '/api/calendar/machines'
-      path: '/api/calendar/machines'
-      fullPath: '/api/calendar/machines'
-      preLoaderRoute: typeof ApiCalendarMachinesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/calendar/availability': {
-      id: '/api/calendar/availability'
-      path: '/api/calendar/availability'
-      fullPath: '/api/calendar/availability'
-      preLoaderRoute: typeof ApiCalendarAvailabilityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/demo/start/ssr/': {
       id: '/demo/start/ssr/'
       path: '/demo/start/ssr'
-      fullPath: '/demo/start/ssr/'
+      fullPath: '/demo/start/ssr'
       preLoaderRoute: typeof DemoStartSsrIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -610,13 +590,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBookingsCreateRoute: ApiBookingsCreateRoute,
   ApiBookingsDeleteRoute: ApiBookingsDeleteRoute,
   ApiBookingsListRoute: ApiBookingsListRoute,
+  ApiCalendarAvailabilityRoute: ApiCalendarAvailabilityRoute,
+  ApiCalendarEventsRoute: ApiCalendarEventsRoute,
+  ApiCalendarMachinesRoute: ApiCalendarMachinesRoute,
   ApiMachinesDeleteRoute: ApiMachinesDeleteRoute,
   ApiMachinesListRoute: ApiMachinesListRoute,
   ApiMachinesUpdateRoute: ApiMachinesUpdateRoute,
-  ApiCalendarEventsRoute: ApiCalendarEventsRoute,
-  ApiCalendarEventsIdRoute: ApiCalendarEventsIdRoute,
-  ApiCalendarMachinesRoute: ApiCalendarMachinesRoute,
-  ApiCalendarAvailabilityRoute: ApiCalendarAvailabilityRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,
