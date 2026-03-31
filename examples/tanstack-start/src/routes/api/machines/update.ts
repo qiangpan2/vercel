@@ -17,6 +17,7 @@ export const Route = createFileRoute('/api/machines/update')({
             ipmi_ip,
             ipmi_password,
             ssh_user,
+            sudo_password,
             domain_name,
             location, 
             model, 
@@ -66,6 +67,7 @@ export const Route = createFileRoute('/api/machines/update')({
                 ipmi_ip = ?,
                 ipmi_password = ?,
                 ssh_user = ?,
+                sudo_password = ?,
                 domain_name = ?,
                 location = ?,
                 model = ?,
@@ -88,6 +90,7 @@ export const Route = createFileRoute('/api/machines/update')({
               ipmi_ip || null,
               ipmi_password || null,
               ssh_user || 'admin',
+              sudo_password || null,
               domain_name || null,
               location || null,
               model || null,
@@ -106,6 +109,10 @@ export const Route = createFileRoute('/api/machines/update')({
             )
             
             console.log('[API] Server updated:', id)
+            if (!is_exclusive) {
+              db.prepare('DELETE FROM booking_permissions WHERE server_id = ?').run(id)
+              console.log('[API] Cleared exclusive whitelist for server:', id)
+            }
           } else {
             // 创建新服务器
             const existing = db.prepare('SELECT id FROM servers WHERE hostname = ?').get(hostname)
@@ -118,17 +125,18 @@ export const Route = createFileRoute('/api/machines/update')({
             
             db.prepare(`
               INSERT INTO servers (
-                hostname, ip, ipmi_ip, ipmi_password, ssh_user,
+                hostname, ip, ipmi_ip, ipmi_password, ssh_user, sudo_password, 
                 domain_name, location, model, sn, bmc_mac,
                 cpu_model, gpu_arch, num_gpus, ram, disk, nic,
                 is_exclusive, status, description
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
               hostname,
               ip || null,
               ipmi_ip || null,
               ipmi_password || null,
               ssh_user || 'admin',
+              sudo_password || null,
               domain_name || null,
               location || null,
               model || null,

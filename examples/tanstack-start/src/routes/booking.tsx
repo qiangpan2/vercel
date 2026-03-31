@@ -24,6 +24,7 @@ interface Machine {
     storage: string
     network: string
   }
+  is_exclusive: boolean
   maxSharedUsers?: number
   ip?: string
   ipmi_ip?: string
@@ -101,7 +102,8 @@ function BookingPage() {
               storage: 'N/A',
               network: 'N/A'
             },
-            maxSharedUsers: m.maxSharedUsers || 1
+            maxSharedUsers: m.maxSharedUsers || 1,
+            is_exclusive: m.is_exclusive || false,
           }))
           setMachines(formattedMachines)
           setSelectedMachine(formattedMachines[0])

@@ -29,7 +29,7 @@ export default function Header() {
   const handleAdminPanel = () => {
     navigate({ to: '/booking' })
     navigate({ to: '/machines' })
-    // 这里可以触发打开管理面板的事件
+    navigate({ to: '/users' })
   }
 
   return (
@@ -100,6 +100,21 @@ export default function Header() {
         </div>
 
         <nav className="flex-1 p-4 overflow-y-auto">
+          {user?.role === 'admin' && (
+            <Link
+              to="/users"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+              activeProps={{
+                className:
+                  'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+              }}
+            >
+              <Settings size={20} />
+              <span className="font-medium">User Management</span>
+              {/* 如果有 pending 用户可以加个小红点 */}
+            </Link>
+          )}
           <Link
             to="/machines"
             onClick={() => setIsOpen(false)}
@@ -125,7 +140,6 @@ export default function Header() {
             <Calendar size={20} />
             <span className="font-medium">Machine Booking</span>
           </Link>
-
         </nav>
       </aside>
     </>

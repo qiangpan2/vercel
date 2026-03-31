@@ -163,6 +163,7 @@ export default function AnsibleControlPanel({ server, userRole, onClose, onStatu
     }
     executeAnsible('grant_access.yml', { 
       sso_username: accessUsername.trim(),
+      ntid: accessUsername.trim(),
       access_group: `machine-access-${server.hostname}`
     })
   }
@@ -177,6 +178,7 @@ export default function AnsibleControlPanel({ server, userRole, onClose, onStatu
     }
     executeAnsible('revoke_access.yml', { 
       sso_username: accessUsername.trim(),
+      ntid: accessUsername.trim(),
       access_group: `machine-access-${server.hostname}`
     })
   }

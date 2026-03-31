@@ -3,7 +3,7 @@
 # 前端调用：前端调用：预定到期或手动撤销时执行，输入用户名，点击 "Revoke Access" 按钮
 #
 # 使用方式：
-#   ansible-playbook playbooks/revoke_access.yml -e "target_machine=cse-ai-3 sso_username=testuser"
+#   ansible-playbook playbooks/revoke_access.yml -e "target_machine=cse-ai-3 ntid=testUser sso_username=testuser"
 
 - name: Revoke SSH access from user
   hosts: "{{ target_machine }}"

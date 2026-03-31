@@ -84,7 +84,7 @@ export async function grantUserAccess(
 ): Promise<ExecResult> {
   return executeAnsible(
     'grant_access.yml',
-    { target_user: username, target_machine: targetHost },
+    { ntid: username, target_user: username, target_machine: targetHost },
     targetHost
   )
 }
@@ -96,7 +96,7 @@ export async function revokeUserAccess(
 ): Promise<ExecResult> {
   return executeAnsible(
     'revoke_access.yml',
-    { target_user: username, target_machine: targetHost },
+    { ntid: username, target_user: username, target_machine: targetHost },
     targetHost
   )
 }

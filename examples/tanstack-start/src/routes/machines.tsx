@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { fetchCurrentUser, getCurrentUser, isAdmin, type User } from '../utils/auth'
 import AnsibleControlPanel from '../components/AnsibleControlPanel'
-
+import { ExclusiveUserManager } from '../components/ExclusiveUserManager'
 
 export const Route = createFileRoute('/machines')({
   component: MachinesPage,
@@ -16,6 +16,7 @@ interface Server {
   ipmi_ip: string
   ipmi_password?: string
   ssh_user?: string
+  sudo_password?: string
   domain_name?: string
   location: string
   model: string
@@ -40,9 +41,8 @@ function MachinesPage() {
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [controllingServer, setControllingServer] = useState<Server | null>(null)
-  const [viewingServer, setViewingServer] = useState<Server | null>(null)  // 查看详情
+  const [viewingServer, setViewingServer] = useState<Server | null>(null)
 
-  // 获取当前用户
   useEffect(() => {
     const initAuth = async () => {
       let currentUser = getCurrentUser()
@@ -81,6 +81,7 @@ function MachinesPage() {
           ipmi_ip: m.ipmi_ip || '',
           ipmi_password: m.ipmi_password || '',
           ssh_user: m.ssh_user || 'admin',
+          sudo_password: m.sudo_password || '',
           domain_name: m.domain_name || '',
           location: m.location || '',
           model: m.model || '',
@@ -93,6 +94,7 @@ function MachinesPage() {
           disk: m.specs?.storage || m.disk || '',
           nic: m.specs?.network || m.nic || '',
           is_exclusive: m.is_exclusive || false,
+          // is_exclusive: !!(m.is_exclusive),
           status: (m.status || 'available') as Server['status'],
           description: m.description || m.intro || ''
         }))
@@ -293,7 +295,6 @@ function MachinesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                        {/* 所有用户都能查看详情 */}
                           <button
                             onClick={() => setViewingServer(server)}
                             className="text-gray-400 hover:text-gray-300 mr-3 transition-colors"
@@ -301,7 +302,6 @@ function MachinesPage() {
                             View
                           </button>
 
-                          {/* 管理员操作 */}
                           {userIsAdmin && (
                             <>
                               <span className="text-gray-600">|</span>
@@ -345,7 +345,7 @@ function MachinesPage() {
         </div>
       </div>
 
-      {/* View Modal - 所有用户可见（但敏感信息对非管理员隐藏） */}
+      {/* View Modal */}
       {viewingServer && (
         <ServerViewModal
           server={viewingServer}
@@ -354,8 +354,8 @@ function MachinesPage() {
         />
       )}
 
-      {/* Edit Modal - 只有管理员能打开 */}
-      {isModalOpen && userIsAdmin && (
+      {/* Edit Modal */}
+      {isModalOpen && userIsAdmin && user &&(
         <ServerEditModal
           server={editingServer}
           onSave={handleSave}
@@ -363,6 +363,7 @@ function MachinesPage() {
             setIsModalOpen(false)
             setEditingServer(null)
           }}
+          user={user}
         />
       )}
 
@@ -384,7 +385,6 @@ function MachinesPage() {
               userRole={user?.role || 'user'}
               onClose={() => setControllingServer(null)}
               onStatusChange={() => {
-                // 状态变化后刷新服务器列表
                 fetchServers()
               }}
             />
@@ -395,7 +395,7 @@ function MachinesPage() {
   )
 }
 
-// ============ 查看详情 Modal（普通用户） ============
+// ============ 查看详情 Modal ============
 interface ServerViewModalProps {
   server: Server
   isAdmin: boolean
@@ -479,6 +479,7 @@ function ServerViewModal({ server, isAdmin, onClose }: ServerViewModalProps) {
                 <h3 className="text-sm font-medium text-purple-400 mb-3">🔒 Admin Only</h3>
                 <div className="grid grid-cols-2 gap-4 bg-gray-900/50 rounded-lg p-3">
                   <InfoField label="SSH User" value={server.ssh_user} />
+                  <InfoField label="Sudo Password" value={server.sudo_password} isSensitive />
                   <InfoField label="IPMI Password" value={server.ipmi_password} isSensitive />
                 </div>
               </div>
@@ -550,9 +551,10 @@ interface ServerEditModalProps {
   server: Server | null
   onSave: (server: Partial<Server>) => void
   onClose: () => void
+  user: User
 }
 
-function ServerEditModal({ server, onSave, onClose }: ServerEditModalProps) {
+function ServerEditModal({ server, onSave, onClose, user }: ServerEditModalProps) {
   const [formData, setFormData] = useState<Partial<Server>>(
     server || {
       hostname: '',
@@ -560,6 +562,7 @@ function ServerEditModal({ server, onSave, onClose }: ServerEditModalProps) {
       ipmi_ip: '',
       ipmi_password: '',
       ssh_user: 'admin',
+      sudo_password: '',
       domain_name: '',
       location: '',
       model: '',
@@ -577,7 +580,8 @@ function ServerEditModal({ server, onSave, onClose }: ServerEditModalProps) {
     }
   )
   const [saving, setSaving] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const [showIpmiPassword, setShowIpmiPassword] = useState(false)
+  const [showSudoPassword, setShowSudoPassword] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -676,7 +680,7 @@ function ServerEditModal({ server, onSave, onClose }: ServerEditModalProps) {
                   <label className="block text-sm text-gray-400 mb-1">IPMI Password</label>
                   <div className="relative">
                     <input
-                      type={showPassword ? 'text' : 'password'}
+                      type={showIpmiPassword ? 'text' : 'password'}
                       value={formData.ipmi_password || ''}
                       onChange={e => setFormData({...formData, ipmi_password: e.target.value})}
                       className="w-full bg-gray-700 rounded px-3 py-2 pr-10 focus:ring-2 focus:ring-cyan-500 outline-none"
@@ -684,10 +688,10 @@ function ServerEditModal({ server, onSave, onClose }: ServerEditModalProps) {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => setShowIpmiPassword(!showIpmiPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
                     >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      {showIpmiPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
@@ -705,6 +709,29 @@ function ServerEditModal({ server, onSave, onClose }: ServerEditModalProps) {
                   />
                   <p className="text-xs text-gray-500 mt-1">Used for Ansible connections</p>
                 </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Sudo Password</label>
+                  <div className="relative">
+                    <input
+                      type={showSudoPassword ? 'text' : 'password'}
+                      value={formData.sudo_password || ''}
+                      onChange={e => setFormData({...formData, sudo_password: e.target.value})}
+                      className="w-full bg-gray-700 rounded px-3 py-2 pr-10 focus:ring-2 focus:ring-cyan-500 outline-none"
+                      placeholder="Sudo password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSudoPassword(!showSudoPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                    >
+                      {showSudoPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Used for Ansible become/sudo</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">BMC MAC Address</label>
                   <input
@@ -858,6 +885,15 @@ function ServerEditModal({ server, onSave, onClose }: ServerEditModalProps) {
                   </div>
                 </div>
               </div>
+              {/* ========== Exclusive 白名单管理 ========== */}
+              {server?.id && formData.is_exclusive && (
+                <ExclusiveUserManager
+                  serverId={server.id}
+                  isExclusive={!!formData.is_exclusive}
+                  userRole={user.role}
+                  adminUser={user.ntid}
+                />
+              )}
             </div>
 
             {/* ========== 描述 ========== */}

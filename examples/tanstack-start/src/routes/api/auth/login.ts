@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
-import { login } from '../../../lib/auth/middleware'
+import { login, AuthApprovalError } from '../../../lib/auth/middleware'
 import { createSession } from '../../../lib/auth/session'
 
 export const Route = createFileRoute('/api/auth/login')({
@@ -40,6 +40,26 @@ export const Route = createFileRoute('/api/auth/login')({
           })
         } catch (error) {
           console.error('[Login API] Error:', error)
+
+          // 审批状态错误 → 403 + userStatus
+          if (error instanceof AuthApprovalError) {
+            return json({
+              success: false,
+              error: error.message,
+              userStatus: error.userStatus,
+            }, { status: 403 })
+          }
+
+            // 也兼容通过 error.userStatus 判断（防止 instanceof 失败）
+          if (error.userStatus) {
+            return json({
+              success: false,
+              error: error.message,
+              userStatus: error.userStatus,
+            }, { status: 403 })
+          }
+          
+          // 其他认证错误 → 401
           return json({
             success: false,
             error: error instanceof Error ? error.message : 'Invalid NTID or password'

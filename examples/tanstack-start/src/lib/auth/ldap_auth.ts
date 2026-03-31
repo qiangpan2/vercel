@@ -58,11 +58,12 @@ function createOrUpdateUser(ntid: string): User {
       return { ...existing, last_login: now };
     }
 
+    // 新用户默认权限为 developer, status 为 pending
     db.prepare(`
-    INSERT INTO users (ntid, display_name, email, user_level, last_login)
-    VALUES (?, ?, ?, 'developer', ?)
+    INSERT INTO users (ntid, display_name, email, user_level, status, last_login)
+    VALUES (?, ?, ?, 'developer', 'pending', ?)
     `).run(ntid, ntid, `${ntid}@amd.com`, now);  // 默认 developer
-    console.log('Created new user:', ntid);
+    console.log('Created new user (pending):', ntid);
     return db.prepare('SELECT * FROM users WHERE ntid = ?').get(ntid) as User;
 }
 

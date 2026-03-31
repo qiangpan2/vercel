@@ -32,12 +32,30 @@ export const Route = createFileRoute('/api/bookings/create')({
           }
           
           // 获取机器名称（用于 Ansible）
-          const machine = db.prepare('SELECT hostname FROM servers WHERE id = ?').get(machineId) as { hostname: string } | undefined
+          const machine = db.prepare(
+            'SELECT id, hostname, is_exclusive FROM servers WHERE id = ?'
+          ).get(machineId) as { id: number; hostname: string; is_exclusive: number } | undefined
           if (!machine) {
             return json({ 
               success: false, 
               error: 'Machine not found' 
             }, { status: 404 })
+          }
+
+          // 如果服务器被管理员标记为 exclusive 模式，检查用户是否在白名单中且有 can_book 权限
+          if (machine.is_exclusive) {
+            const permission = db.prepare(
+              'SELECT id, can_book FROM booking_permissions WHERE server_id = ? AND ntid = ?'
+            ).get(machineId, ntid) as { id: number; can_book: number } | undefined
+            
+            if (!permission || !permission.can_book) {
+              console.log('[API] User not in exclusive whitelist:', { ntid, machineId })
+              return json({ 
+                success: false, 
+                error: 'This machine is in exclusive mode. You are not authorized to book it. Contact an admin to be added to the whitelist.' 
+              }, { status: 403 })
+            }
+            console.log('[API] User passed exclusive whitelist check:', ntid)
           }
 
           // 确保用户存在

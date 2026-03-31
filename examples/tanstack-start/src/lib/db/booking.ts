@@ -12,6 +12,7 @@ function isTruthyEnv(value: string | undefined) {
 	return value === "1" || value === "true" || value === "yes"
 }
 
+<<<<<<< HEAD
 export function resolveBookingDbPath({
 	env = process.env,
 	cwd = process.cwd(),
@@ -52,6 +53,12 @@ function maybeSeedDb(dbPath: string) {
 		// best-effort
 	}
 }
+=======
+const dbPath = '/mnt/data/vercel/booking.db';
+// 数据库文件固定放在项目根目录的 data 文件夹中
+//const dbPath = path.join(__dirname, '../../../data/booking.db');
+//const dbPath = path.join(process.cwd(), 'booking.db');
+>>>>>>> 93cafb05c (Sync update, mainly user management and bugfix.)
 
 // import fs from 'fs';
 // // 打印路径用于调试
@@ -295,9 +302,64 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookings_ntid ON bookings(ntid);
   CREATE INDEX IF NOT EXISTS idx_bookings_time ON bookings(start_time, end_time);
 
+  -- 预订权限表
+  CREATE TABLE IF NOT EXISTS booking_permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER NOT NULL,
+    ntid TEXT NOT NULL,
+    added_by TEXT NOT NULL,
+    can_book INTEGER DEFAULT 0,
+    can_manage INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+    FOREIGN KEY (ntid) REFERENCES users(ntid)
+  );
 `);
 
+<<<<<<< HEAD
 runMigrations(db)
+=======
+// ============================================
+// Migration: 给已有的 users 表补加 status 列
+// ============================================
+function runMigrations() {
+  // 检查 users 表是否有 status 列
+  const columns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  const hasStatus = columns.some(col => col.name === 'status');
+
+  if (!hasStatus) {
+    console.log('[DB Migration] Adding status column to users table...');
+    db.exec(`ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected', 'revoked'))`);
+    // 把已有的用户全部设为 approved（他们是在没有审批机制时创建的）
+    db.exec(`UPDATE users SET status = 'approved' WHERE status IS NULL OR status = 'pending'`);
+    console.log('[DB Migration] status column added, existing users set to approved');
+  }
+}
+
+// 确保 coresw 账户始终存在且为 admin + approved
+function ensureCoreswAccount() {
+  const coresw = db.prepare('SELECT * FROM users WHERE ntid = ?').get('coresw') as any;
+  if (!coresw) {
+    db.prepare(
+      `INSERT INTO users (ntid, display_name, user_level, status, created_at)
+       VALUES ('coresw', 'Core System Admin', 'admin', 'approved', CURRENT_TIMESTAMP)`
+    ).run();
+    console.log('[DB] Created coresw account');
+  } else {
+    // 强制保证 coresw 一定是 admin + approved
+    if (coresw.user_level !== 'admin' || coresw.status !== 'approved') {
+      db.prepare(
+        `UPDATE users SET user_level = 'admin', status = 'approved' WHERE ntid = 'coresw'`
+      ).run();
+      console.log('[DB] Enforced coresw as admin + approved');
+    }
+  }
+}
+
+runMigrations();
+ensureCoreswAccount();
+>>>>>>> 93cafb05c (Sync update, mainly user management and bugfix.)
 
 export default db;
 
@@ -308,6 +370,7 @@ export interface User {
   email: string | null;
   timezone: string;
   user_level: 'viewer' | 'developer' | 'admin';
+  status: 'pending' | 'approved' | 'rejected' | 'revoked';
   created_at: string;
   last_login: string | null;
 }
@@ -344,6 +407,17 @@ export interface Booking {
   end_time: number;
   is_exclusive: number;
   status: 'active' | 'cancelled' | 'completed';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BookingPermission {
+  id: number;
+  server_id: number;
+  ntid: string;
+  added_by: string;
+  can_book: number;
+  can_manage: number;
   created_at: string;
   updated_at: string;
 }

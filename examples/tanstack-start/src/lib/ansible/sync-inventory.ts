@@ -18,6 +18,7 @@ interface ServerRecord {
   ipmi_ip: string | null
   ipmi_password: string | null
   ssh_user: string | null
+  ssh_password: string | null
   status: string
 }
 
@@ -38,7 +39,7 @@ function getProjectRoot(): string {
 function generateInventoryYAML(): string {
   const servers = db.prepare(`
     SELECT 
-      id, hostname, ip, ipmi_ip, ipmi_password, ssh_user, status
+      id, hostname, ip, ipmi_ip, ipmi_password, ssh_user, sudo_password, status
     FROM servers
     WHERE ip IS NOT NULL AND ip != ''
     ORDER BY hostname
@@ -65,10 +66,18 @@ function generateInventoryYAML(): string {
     }
 
     yaml += `        ${server.hostname}:\n`
-    yaml += `          ansible_host: ${server.ip}\n`
+    // yaml += `          ansible_host: ${server.ip}\n`
+    yaml += `          ansible_host: ${server.hostname}\n`
     yaml += `          ansible_user: ${server.ssh_user || 'admin'}\n`
     yaml += `          ansible_ssh_private_key_file: ~/.ssh/id_rsa\n`
 
+    // sudo /become 配置
+    yaml += `          ansible_become: true\n`
+    yaml += `          ansible_become_method: sudo\n`
+    if (server.sudo_password) {
+        yaml += `          ansible_become_password: "${server.sudo_password}"\n`
+    }
+ 
     // IPMI 配置
     if (server.ipmi_ip) {
       yaml += `          ipmi_host: ${server.ipmi_ip}\n`

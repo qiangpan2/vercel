@@ -83,7 +83,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 // 数据库路径
-const dbPath = path.join(__dirname, '../data/booking.db')
+// const dbPath = path.join(__dirname, '../data/booking.db')
+const dbPath = path.join(__dirname, '/mnt/data/vercel/booking.db')
 
 // 检查数据库是否存在
 if (!fs.existsSync(dbPath)) {

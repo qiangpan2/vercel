@@ -34,6 +34,7 @@ const worker = new Worker<PermissionTask>(
           {
             target_machine: machineId,
             sso_username: ssoUsername,
+            ntid: ssoUsername, // 假设 NTID 与 SSO 用户名相同
             access_group: accessGroup
           }
         )
@@ -65,6 +66,7 @@ const worker = new Worker<PermissionTask>(
           {
             target_machine: machineId,
             sso_username: ssoUsername,
+            ntid: ssoUsername, // 假设 NTID 与 SSO 用户名相同
             access_group: accessGroup
           }
         )
