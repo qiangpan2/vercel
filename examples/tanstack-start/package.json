@@ -2,15 +2,19 @@
   "name": "tanstack-vc",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.1.0",
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "serve": "vite preview",
     "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "worker:perm": "tsx src/workers/permission-worker.ts",
+    "worker:fast": "tsx src/workers/task-worker-fast.ts",
+    "worker:slow": "tsx src/workers/task-worker-slow.ts",
     "seed:machines": "tsx scripts/seed-machines.ts",
     "generate:ansible": "tsx scripts/generate-ansible-hosts.ts",
-    "setup:all": "pnpm generate:ansible && pnpm seed:machines"
+    "setup:all": "bun run generate:ansible && bun run seed:machines"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.0.6",

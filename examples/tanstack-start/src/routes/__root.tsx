@@ -1,11 +1,12 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
+import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
+import { TanStackDevtools } from "@tanstack/react-devtools"
+import { useEffect, useState } from "react"
 
-import Header from '../components/Header'
-import ChatWidget from '../components/ChatWidget'
+import Header from "../components/Header"
+import ChatWidgetLoader from "../components/ChatWidgetLoader"
 
-import appCss from '../styles.css?url'
+import appCss from "../styles.css?url"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -44,20 +45,35 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           {children}
         </div>
         {/* Floating AI chat bubble — only renders in the browser when a user is logged in */}
-        <ChatWidget />
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+        <ChatWidgetLoader />
+        <Devtools />
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function Devtools() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+  if (!import.meta.env.DEV) return null
+
+  return (
+    <TanStackDevtools
+      config={{
+        position: "bottom-right",
+      }}
+      plugins={[
+        {
+          name: "Tanstack Router",
+          render: <TanStackRouterDevtoolsPanel />,
+        },
+      ]}
+    />
   )
 }

@@ -1,4 +1,4 @@
-import { authenticateWithLDAP, getUserByNtid } from './ldap_auth';
+import { authenticateWithLDAP, getUserByNtid, normalizeNtid } from './ldap_auth';
 import type { User } from '../db/booking';
 
 // 重新导出 User 类型供外部使用
@@ -17,22 +17,23 @@ export interface AuthUser {
  * 使用 LDAP 进行身份验证
  */
 export async function login(ntid: string, password: string): Promise<AuthUser> {
+  const normalizedNtid = normalizeNtid(ntid);
   // test 模式下自动通过认证
   const testMode = process.env.AUTH_TEST_MODE === 'true';
-  console.log('[Auth] Login attempt for NTID:', ntid, 'Test mode:', testMode);
+  console.log('[Auth] Login attempt for NTID:', normalizedNtid, 'Test mode:', testMode);
   if (testMode) {
-    console.log('[Auth] Test mode enabled - auto-approving user:', ntid);
+    console.log('[Auth] Test mode enabled - auto-approving user:', normalizedNtid);
     return {
-      ntid,
-      displayName: `Test User ${ntid}`,
-      email: `${ntid}@amd.com`,
-      role: ntid === 'admin' ? 'admin' : 'developer',
+      ntid: normalizedNtid,
+      displayName: `Test User ${normalizedNtid}`,
+      email: `${normalizedNtid}@amd.com`,
+      role: normalizedNtid === 'admin' ? 'admin' : 'developer',
       timezone: 'UTC',
     };
   }
 
   // 正常进行 LDAP 认证
-  const result = await authenticateWithLDAP(ntid, password);
+  const result = await authenticateWithLDAP(normalizedNtid, password);
   
   if (!result.success || !result.user) {
     throw new Error(result.error || 'Authentication failed');

@@ -1,8 +1,15 @@
 import ldap from 'ldapjs';
 import db, { User } from '../db/booking';
 
-const LDAP_SERVER = 'ldap://ausldap.amd.com:389';
-const LDAP_DOMAIN = '@amd.com';
+const LDAP_SERVER = process.env.LDAP_SERVER || 'ldap://ausldap.amd.com:389';
+const LDAP_DOMAIN = process.env.LDAP_DOMAIN || '@amd.com';
+
+export function normalizeNtid(input: string): string {
+  const trimmed = input.trim();
+  const withoutDomain = trimmed.includes("@") ? trimmed.split("@")[0] : trimmed;
+  const withoutPrefix = withoutDomain.includes("\\") ? withoutDomain.split("\\").at(-1) || withoutDomain : withoutDomain;
+  return withoutPrefix;
+}
 
 export interface AuthResult {
   success: boolean;
@@ -12,6 +19,7 @@ export interface AuthResult {
 
 export async function authenticateWithLDAP(ntid: string, password: string): Promise<AuthResult> {
   return new Promise((resolve) => {
+    const normalizedNtid = normalizeNtid(ntid);
     const client = ldap.createClient({
       url: LDAP_SERVER,
       connectTimeout: 5000,
@@ -23,7 +31,7 @@ export async function authenticateWithLDAP(ntid: string, password: string): Prom
       resolve({ success: false, error: 'LDAP connection failed' });
     });
 
-    const userDN = `${ntid}${LDAP_DOMAIN}`;
+    const userDN = `${normalizedNtid}${LDAP_DOMAIN}`;
 
     client.bind(userDN, password, (err) => {
       client.unbind();
@@ -34,7 +42,7 @@ export async function authenticateWithLDAP(ntid: string, password: string): Prom
         return;
       }
 
-      const user = createOrUpdateUser(ntid);
+      const user = createOrUpdateUser(normalizedNtid);
       resolve({ success: true, user });
     });
   });

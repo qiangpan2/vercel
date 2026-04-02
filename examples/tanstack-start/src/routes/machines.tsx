@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
-import { getCurrentUser, isAdmin, type User } from '../utils/auth'
+import { fetchCurrentUser, getCurrentUser, isAdmin, type User } from '../utils/auth'
 import AnsibleControlPanel from '../components/AnsibleControlPanel'
 
 
@@ -44,12 +44,20 @@ function MachinesPage() {
 
   // 获取当前用户
   useEffect(() => {
-    const currentUser = getCurrentUser()
-    setUser(currentUser)
-    
-    if (!currentUser) {
-      window.location.href = '/login?redirect=/machines'
+    const initAuth = async () => {
+      let currentUser = getCurrentUser()
+      if (!currentUser) {
+        currentUser = await fetchCurrentUser()
+      }
+
+      setUser(currentUser)
+
+      if (!currentUser) {
+        window.location.href = '/login?redirect=/machines'
+      }
     }
+
+    initAuth()
   }, [])
 
   useEffect(() => {
@@ -890,4 +898,3 @@ function ServerEditModal({ server, onSave, onClose }: ServerEditModalProps) {
     </div>
   )
 }
-

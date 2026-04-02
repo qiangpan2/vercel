@@ -1,6 +1,6 @@
 /**
  * 初始化机器数据到 Redis
- * 运行: pnpm seed:machines
+ * 运行: bun run seed:machines
  * 
  * 从 machines.json 读取配置，初始化到 Redis
  */
@@ -49,7 +49,7 @@ async function seed() {
   
   console.log(`\n✅ Successfully seeded ${machines.length} machines to Redis!`)
   console.log('\nYou can now start the application and workers.')
-  console.log('💡 Tip: Run "pnpm generate:ansible" to update Ansible inventory')
+  console.log('💡 Tip: Run "bun run generate:ansible" to update Ansible inventory')
   
   process.exit(0)
 }

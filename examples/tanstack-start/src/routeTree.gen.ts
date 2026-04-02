@@ -18,6 +18,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
 import { Route as DemoStartApiRequestRouteImport } from './routes/demo/start.api-request'
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
+import { Route as ApiQueuesStatusRouteImport } from './routes/api/queues/status'
+import { Route as ApiQueuesJobsRouteImport } from './routes/api/queues/jobs'
+import { Route as ApiQueuesControlRouteImport } from './routes/api/queues/control'
 import { Route as ApiMachinesUpdateRouteImport } from './routes/api/machines/update'
 import { Route as ApiMachinesListRouteImport } from './routes/api/machines/list'
 import { Route as ApiMachinesDeleteRouteImport } from './routes/api/machines/delete'
@@ -80,6 +83,21 @@ const DemoStartApiRequestRoute = DemoStartApiRequestRouteImport.update({
 const DemoApiNamesRoute = DemoApiNamesRouteImport.update({
   id: '/demo/api/names',
   path: '/demo/api/names',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiQueuesStatusRoute = ApiQueuesStatusRouteImport.update({
+  id: '/api/queues/status',
+  path: '/api/queues/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiQueuesJobsRoute = ApiQueuesJobsRouteImport.update({
+  id: '/api/queues/jobs',
+  path: '/api/queues/jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiQueuesControlRoute = ApiQueuesControlRouteImport.update({
+  id: '/api/queues/control',
+  path: '/api/queues/control',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMachinesUpdateRoute = ApiMachinesUpdateRouteImport.update({
@@ -194,13 +212,16 @@ export interface FileRoutesByFullPath {
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
+  '/api/queues/control': typeof ApiQueuesControlRoute
+  '/api/queues/jobs': typeof ApiQueuesJobsRoute
+  '/api/queues/status': typeof ApiQueuesStatusRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
   '/demo/start/ssr/data-only': typeof DemoStartSsrDataOnlyRoute
   '/demo/start/ssr/full-ssr': typeof DemoStartSsrFullSsrRoute
   '/demo/start/ssr/spa-mode': typeof DemoStartSsrSpaModeRoute
-  '/demo/start/ssr': typeof DemoStartSsrIndexRoute
+  '/demo/start/ssr/': typeof DemoStartSsrIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -223,6 +244,9 @@ export interface FileRoutesByTo {
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
+  '/api/queues/control': typeof ApiQueuesControlRoute
+  '/api/queues/jobs': typeof ApiQueuesJobsRoute
+  '/api/queues/status': typeof ApiQueuesStatusRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -253,6 +277,9 @@ export interface FileRoutesById {
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
+  '/api/queues/control': typeof ApiQueuesControlRoute
+  '/api/queues/jobs': typeof ApiQueuesJobsRoute
+  '/api/queues/status': typeof ApiQueuesStatusRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -284,13 +311,16 @@ export interface FileRouteTypes {
     | '/api/machines/delete'
     | '/api/machines/list'
     | '/api/machines/update'
+    | '/api/queues/control'
+    | '/api/queues/jobs'
+    | '/api/queues/status'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
     | '/demo/start/ssr/data-only'
     | '/demo/start/ssr/full-ssr'
     | '/demo/start/ssr/spa-mode'
-    | '/demo/start/ssr'
+    | '/demo/start/ssr/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -313,6 +343,9 @@ export interface FileRouteTypes {
     | '/api/machines/delete'
     | '/api/machines/list'
     | '/api/machines/update'
+    | '/api/queues/control'
+    | '/api/queues/jobs'
+    | '/api/queues/status'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -342,6 +375,9 @@ export interface FileRouteTypes {
     | '/api/machines/delete'
     | '/api/machines/list'
     | '/api/machines/update'
+    | '/api/queues/control'
+    | '/api/queues/jobs'
+    | '/api/queues/status'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -372,6 +408,9 @@ export interface RootRouteChildren {
   ApiMachinesDeleteRoute: typeof ApiMachinesDeleteRoute
   ApiMachinesListRoute: typeof ApiMachinesListRoute
   ApiMachinesUpdateRoute: typeof ApiMachinesUpdateRoute
+  ApiQueuesControlRoute: typeof ApiQueuesControlRoute
+  ApiQueuesJobsRoute: typeof ApiQueuesJobsRoute
+  ApiQueuesStatusRoute: typeof ApiQueuesStatusRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
@@ -444,6 +483,27 @@ declare module '@tanstack/react-router' {
       path: '/demo/api/names'
       fullPath: '/demo/api/names'
       preLoaderRoute: typeof DemoApiNamesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/queues/status': {
+      id: '/api/queues/status'
+      path: '/api/queues/status'
+      fullPath: '/api/queues/status'
+      preLoaderRoute: typeof ApiQueuesStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/queues/jobs': {
+      id: '/api/queues/jobs'
+      path: '/api/queues/jobs'
+      fullPath: '/api/queues/jobs'
+      preLoaderRoute: typeof ApiQueuesJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/queues/control': {
+      id: '/api/queues/control'
+      path: '/api/queues/control'
+      fullPath: '/api/queues/control'
+      preLoaderRoute: typeof ApiQueuesControlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/machines/update': {
@@ -547,7 +607,7 @@ declare module '@tanstack/react-router' {
     '/demo/start/ssr/': {
       id: '/demo/start/ssr/'
       path: '/demo/start/ssr'
-      fullPath: '/demo/start/ssr'
+      fullPath: '/demo/start/ssr/'
       preLoaderRoute: typeof DemoStartSsrIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -596,6 +656,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMachinesDeleteRoute: ApiMachinesDeleteRoute,
   ApiMachinesListRoute: ApiMachinesListRoute,
   ApiMachinesUpdateRoute: ApiMachinesUpdateRoute,
+  ApiQueuesControlRoute: ApiQueuesControlRoute,
+  ApiQueuesJobsRoute: ApiQueuesJobsRoute,
+  ApiQueuesStatusRoute: ApiQueuesStatusRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,

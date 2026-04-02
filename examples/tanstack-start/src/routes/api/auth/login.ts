@@ -22,7 +22,7 @@ export const Route = createFileRoute('/api/auth/login')({
           const user = await login(ntid, password)
           
           // 创建会话
-          const sessionId = createSession(ntid)
+          const sessionId = createSession(user.ntid)
           
           return json({
             success: true,

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, lazy, Suspense, useEffect } from 'react'
 import { Info, X, Power, PowerOff, Settings } from 'lucide-react'
-import { getCurrentUser, isAdmin, type User } from '../utils/auth'
+import { fetchCurrentUser, getCurrentUser, isAdmin, type User } from '../utils/auth'
 
 // Dynamic import to avoid SSR issues with date-fns
 const MachineBookingCalendar = lazy(() => import('../components/MachineBookingCalendar'))
@@ -54,17 +54,25 @@ function BookingPage() {
 
   // 客户端认证检查
   useEffect(() => {
-    const currentUser = getCurrentUser()
-    console.log('[Booking] Current user:', currentUser)
-    
-    if (!currentUser) {
-      console.log('[Booking] No user, redirecting to login')
-      window.location.href = '/login?redirect=/booking'
-      return
+    const initAuth = async () => {
+      let currentUser = getCurrentUser()
+      if (!currentUser) {
+        currentUser = await fetchCurrentUser()
+      }
+
+      console.log('[Booking] Current user:', currentUser)
+
+      if (!currentUser) {
+        console.log('[Booking] No user, redirecting to login')
+        window.location.href = '/login?redirect=/booking'
+        return
+      }
+
+      setUser(currentUser)
+      setAuthChecked(true)
     }
-    
-    setUser(currentUser)
-    setAuthChecked(true)
+
+    initAuth()
   }, [])
 
   // 获取机器列表（客户端通过 API）

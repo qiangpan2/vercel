@@ -37,6 +37,43 @@ export function getCurrentUser(): User | null {
   }
 }
 
+/**
+ * 从后端 session cookie 获取当前用户（用于 localStorage 不可用/丢失时的兜底）
+ */
+export async function fetchCurrentUser(): Promise<User | null> {
+  if (typeof window === "undefined") return null
+
+  try {
+    const res = await fetch("/api/auth/me", {
+      method: "GET",
+      headers: { accept: "application/json" },
+    })
+    if (!res.ok) return null
+
+    const data = (await res.json()) as { user?: any }
+    if (!data.user) return null
+
+    const user: User = {
+      ntid: data.user.ntid ?? "",
+      username: data.user.ntid ?? "",
+      displayName: data.user.displayName ?? data.user.ntid ?? "",
+      email: data.user.email ?? undefined,
+      role: data.user.role ?? "developer",
+    }
+
+    try {
+      localStorage.setItem("user", JSON.stringify(user))
+    } catch {
+      // ignore storage failures (e.g. privacy mode)
+    }
+
+    return user
+  } catch (e) {
+    console.error("[Auth] Failed to fetch user from /api/auth/me:", e)
+    return null
+  }
+}
+
 // 检查是否管理员
 export function isAdmin(user: User | null): boolean {
   return user?.role === 'admin';

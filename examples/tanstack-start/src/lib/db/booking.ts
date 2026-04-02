@@ -1,17 +1,57 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
+
+import Database from "better-sqlite3"
 import { restoreAllTimers } from '../booking/timer'
 import { handleStartup, registerShutdownHandlers } from '../booking/restart_hold'
 
+type BookingDb = InstanceType<typeof Database>
 
-// 获取当前文件所在目录
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+function isTruthyEnv(value: string | undefined) {
+	return value === "1" || value === "true" || value === "yes"
+}
 
-// 数据库文件固定放在项目根目录的 data 文件夹中
-const dbPath = path.join(__dirname, '../../../data/booking.db');
-//const dbPath = path.join(process.cwd(), 'booking.db');
+export function resolveBookingDbPath({
+	env = process.env,
+	cwd = process.cwd(),
+}: { env?: NodeJS.ProcessEnv; cwd?: string } = {}) {
+	const explicit = env.BOOKING_DB_PATH?.trim()
+	if (explicit) return explicit
+
+	const dbDir = env.BOOKING_DB_DIR?.trim()
+	if (dbDir) return path.join(dbDir, "booking.db")
+
+	// Tests should always use the repo DB to avoid relying on external mounts.
+	if (isTruthyEnv(env.VITEST) || env.NODE_ENV === "test") {
+		return path.join(cwd, "data", "booking.db")
+	}
+
+	// Default to the persistent mount used in Vercel/containers.
+	// Local dev/tests can override via BOOKING_DB_PATH/BOOKING_DB_DIR.
+	return "/mnt/data/vercel/booking.db"
+}
+
+function ensureDbDirExists(dbPath: string) {
+	try {
+		fs.mkdirSync(path.dirname(dbPath), { recursive: true })
+	} catch {
+		// best-effort
+	}
+}
+
+function maybeSeedDb(dbPath: string) {
+	try {
+		if (fs.existsSync(dbPath)) return
+
+		const seed = path.join(process.cwd(), "data", "booking.db")
+		if (!fs.existsSync(seed)) return
+
+		fs.copyFileSync(seed, dbPath)
+	} catch {
+		// best-effort
+	}
+}
 
 // import fs from 'fs';
 // // 打印路径用于调试
@@ -26,7 +66,122 @@ const dbPath = path.join(__dirname, '../../../data/booking.db');
 //   console.log('[booking.ts] Created data directory:', dataDir);
 // }
 
-const db = new Database(dbPath);
+const primaryDbPath = resolveBookingDbPath()
+
+function isTestRuntime(env: NodeJS.ProcessEnv) {
+	return isTruthyEnv(env.VITEST) || env.NODE_ENV === "test"
+}
+
+function openDb(dbPath: string) {
+	const effectiveDbPath = isTestRuntime(process.env)
+		? path.join(fs.mkdtempSync(path.join(os.tmpdir(), "booking-db-")), "booking.db")
+		: dbPath
+
+	ensureDbDirExists(effectiveDbPath)
+	maybeSeedDb(effectiveDbPath)
+	return new Database(effectiveDbPath)
+}
+
+function getTableColumns(db: BookingDb, tableName: string): Set<string> {
+	const rows = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>
+	return new Set(rows.map((row) => row.name))
+}
+
+function addColumnIfMissing({
+	db,
+	tableName,
+	columnName,
+	columnDefinition,
+}: {
+	db: BookingDb
+	tableName: string
+	columnName: string
+	columnDefinition: string
+}) {
+	const columns = getTableColumns(db, tableName)
+	if (columns.has(columnName)) return
+	db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnDefinition}`)
+	console.log(`[DB] Migrated: added ${tableName}.${columnName}`)
+}
+
+function ensureBookingsAllowsSuspend(db: BookingDb) {
+	const row = db
+		.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='bookings'")
+		.get() as { sql?: string } | undefined
+	const sql = row?.sql || ""
+	if (sql.includes("'suspend'")) return
+
+	console.log("[DB] Migrating: bookings.status to allow 'suspend'...")
+
+	db.exec(`
+		BEGIN;
+		CREATE TABLE IF NOT EXISTS bookings_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			server_id INTEGER NOT NULL,
+			ntid TEXT NOT NULL,
+			book_reason TEXT,
+			start_time INTEGER NOT NULL,
+			end_time INTEGER NOT NULL,
+			is_exclusive INTEGER DEFAULT 0,
+			status TEXT DEFAULT 'active' CHECK(status IN ('active', 'cancelled', 'completed', 'suspend')),
+			created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+			updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+			FOREIGN KEY (ntid) REFERENCES users(ntid)
+		);
+		INSERT INTO bookings_new (
+			id, server_id, ntid, book_reason, start_time, end_time, is_exclusive, status, created_at, updated_at
+		)
+		SELECT
+			id, server_id, ntid, book_reason, start_time, end_time, is_exclusive, status, created_at, updated_at
+		FROM bookings;
+		DROP TABLE bookings;
+		ALTER TABLE bookings_new RENAME TO bookings;
+		CREATE INDEX IF NOT EXISTS idx_bookings_server ON bookings(server_id);
+		CREATE INDEX IF NOT EXISTS idx_bookings_ntid ON bookings(ntid);
+		CREATE INDEX IF NOT EXISTS idx_bookings_time ON bookings(start_time, end_time);
+		COMMIT;
+	`)
+
+	console.log("[DB] Migrated: bookings.status now allows 'suspend'")
+}
+
+function runMigrations(db: BookingDb) {
+	try {
+		addColumnIfMissing({
+			db,
+			tableName: "servers",
+			columnName: "ssh_user",
+			columnDefinition: "ssh_user TEXT DEFAULT 'root'",
+		})
+		addColumnIfMissing({
+			db,
+			tableName: "servers",
+			columnName: "ipmi_password",
+			columnDefinition: "ipmi_password TEXT DEFAULT ''",
+		})
+		addColumnIfMissing({
+			db,
+			tableName: "servers",
+			columnName: "previous_status",
+			columnDefinition: "previous_status TEXT DEFAULT NULL",
+		})
+
+		ensureBookingsAllowsSuspend(db)
+	} catch (error) {
+		console.warn("[DB] Migration skipped/failed:", error)
+	}
+}
+
+let db
+try {
+	db = openDb(primaryDbPath)
+} catch (error) {
+	// If we're in a read-only runtime (e.g. Vercel), fall back to /tmp.
+	const fallbackDbPath = "/tmp/booking.db"
+	db = openDb(fallbackDbPath)
+	console.warn("[DB] Failed to open primary DB path:", primaryDbPath, "→ using", fallbackDbPath, error)
+}
 
 // 服务启动时恢复定时器（只执行一次）
 let timerInitialized = false
@@ -141,6 +296,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookings_time ON bookings(start_time, end_time);
 
 `);
+
+runMigrations(db)
 
 export default db;
 

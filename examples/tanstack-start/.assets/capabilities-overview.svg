@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" role="img" aria-label="Project capabilities overview">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .title { font: 800 36px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #0f172a; }
+      .subtitle { font: 500 16px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #475569; }
+      .card { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .cardTitle { font: 800 18px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #0f172a; }
+      .cardBody { font: 500 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #334155; }
+      .chip { fill: #e2e8f0; }
+      .chipText { font: 700 12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #0f172a; }
+      .iconRing { fill: #eff6ff; stroke: #60a5fa; stroke-width: 2; }
+      .iconStroke { fill: none; stroke: #2563eb; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+      .frame { fill: none; stroke: #e2e8f0; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="640" />
+  <rect class="frame" x="18" y="18" width="1164" height="604" rx="18" />
+
+  <text class="title" x="60" y="92">Rapids — AI Ops Console</text>
+  <text class="subtitle" x="60" y="122">Booking calendar, machine inventory, automation, and background job processing (Redis + BullMQ).</text>
+
+  <!-- Card layout: 3 columns x 2 rows -->
+  <!-- Row 1 -->
+  <g transform="translate(60,160)">
+    <rect class="card" x="0" y="0" width="340" height="200" rx="16" />
+    <circle class="iconRing" cx="44" cy="48" r="22" />
+    <!-- Calendar icon -->
+    <rect class="iconStroke" x="32" y="38" width="24" height="22" rx="3" />
+    <path class="iconStroke" d="M32 45h24" />
+    <path class="iconStroke" d="M38 34v8M50 34v8" />
+    <text class="cardTitle" x="84" y="54">Booking Calendar</text>
+    <text class="cardBody" x="24" y="92">Create / view / cancel bookings with a calendar UI</text>
+    <text class="cardBody" x="24" y="114">Backed by SQLite and server-side API routes</text>
+    <rect class="chip" x="24" y="144" width="128" height="26" rx="13" />
+    <text class="chipText" x="36" y="162">/booking</text>
+  </g>
+
+  <g transform="translate(430,160)">
+    <rect class="card" x="0" y="0" width="340" height="200" rx="16" />
+    <circle class="iconRing" cx="44" cy="48" r="22" />
+    <!-- Server icon -->
+    <rect class="iconStroke" x="30" y="36" width="28" height="28" rx="4" />
+    <path class="iconStroke" d="M34 44h20M34 52h20" />
+    <circle cx="36" cy="60" r="1.8" fill="#2563eb" />
+    <circle cx="42" cy="60" r="1.8" fill="#2563eb" />
+    <text class="cardTitle" x="84" y="54">Machine Inventory</text>
+    <text class="cardBody" x="24" y="92">View machine specs, status, and metadata</text>
+    <text class="cardBody" x="24" y="114">Admin can add/update/delete machines</text>
+    <rect class="chip" x="24" y="144" width="136" height="26" rx="13" />
+    <text class="chipText" x="36" y="162">/machines</text>
+  </g>
+
+  <g transform="translate(800,160)">
+    <rect class="card" x="0" y="0" width="340" height="200" rx="16" />
+    <circle class="iconRing" cx="44" cy="48" r="22" />
+    <!-- Shield icon -->
+    <path class="iconStroke" d="M44 34l14 6v10c0 10-6 16-14 18c-8-2-14-8-14-18V40z" />
+    <path class="iconStroke" d="M44 46v16" />
+    <text class="cardTitle" x="84" y="54">Auth &amp; Roles</text>
+    <text class="cardBody" x="24" y="92">LDAP-backed login with user role gating</text>
+    <text class="cardBody" x="24" y="114">Routes redirect unauthenticated users to /login</text>
+    <rect class="chip" x="24" y="144" width="112" height="26" rx="13" />
+    <text class="chipText" x="36" y="162">/login</text>
+  </g>
+
+  <!-- Row 2 -->
+  <g transform="translate(60,386)">
+    <rect class="card" x="0" y="0" width="340" height="200" rx="16" />
+    <circle class="iconRing" cx="44" cy="48" r="22" />
+    <!-- Terminal icon -->
+    <path class="iconStroke" d="M32 40h24v20H32z" />
+    <path class="iconStroke" d="M36 46l5 4l-5 4" />
+    <path class="iconStroke" d="M44 54h8" />
+    <text class="cardTitle" x="84" y="54">Automation (Ansible)</text>
+    <text class="cardBody" x="24" y="92">Trigger playbook-like actions from the UI</text>
+    <text class="cardBody" x="24" y="114">Health checks and command execution via API routes</text>
+    <rect class="chip" x="24" y="144" width="196" height="26" rx="13" />
+    <text class="chipText" x="36" y="162">/api/ansible/*</text>
+  </g>
+
+	  <g transform="translate(430,386)">
+	    <rect class="card" x="0" y="0" width="340" height="200" rx="16" />
+	    <circle class="iconRing" cx="44" cy="48" r="22" />
+	    <!-- Queue icon -->
+	    <path class="iconStroke" d="M32 42h24" />
+	    <path class="iconStroke" d="M32 50h18" />
+	    <path class="iconStroke" d="M32 58h12" />
+	    <circle cx="56" cy="42" r="2" fill="#2563eb" />
+	    <circle cx="52" cy="50" r="2" fill="#2563eb" />
+	    <circle cx="48" cy="58" r="2" fill="#2563eb" />
+	    <text class="cardTitle" x="84" y="54">Queues &amp; Workers</text>
+	    <text class="cardBody" x="24" y="92">BullMQ fast/slow queues backed by Redis</text>
+	    <text class="cardBody" x="24" y="114">Separate worker processes handle background tasks</text>
+	    <rect class="chip" x="24" y="144" width="174" height="26" rx="13" />
+	    <text class="chipText" x="36" y="162">bun run worker:*</text>
+	  </g>
+
+  <g transform="translate(800,386)">
+    <rect class="card" x="0" y="0" width="340" height="200" rx="16" />
+    <circle class="iconRing" cx="44" cy="48" r="22" />
+    <!-- Chat bubble icon -->
+    <path class="iconStroke" d="M32 40h24a6 6 0 0 1 6 6v6a6 6 0 0 1-6 6H45l-7 6v-6h-6a6 6 0 0 1-6-6v-6a6 6 0 0 1 6-6z" />
+    <text class="cardTitle" x="84" y="54">Chat Widget (Optional)</text>
+    <text class="cardBody" x="24" y="92">Lazy-loaded floating widget with markdown rendering</text>
+    <text class="cardBody" x="24" y="114">Toggle via env or URL query params</text>
+    <rect class="chip" x="24" y="144" width="210" height="26" rx="13" />
+    <text class="chipText" x="36" y="162">VITE_CHAT_WIDGET_ENABLED</text>
+  </g>
+</svg>

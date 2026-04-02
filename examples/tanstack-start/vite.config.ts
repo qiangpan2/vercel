@@ -5,17 +5,33 @@ import viteTsConfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
 import { nitro } from "nitro/vite";
 
-const config = defineConfig({
-  plugins: [
-    // this is the plugin that enables path aliases
-    viteTsConfigPaths({
-      projects: ["./tsconfig.json"],
-    }),
-    tailwindcss(),
-    tanstackStart(),
-    nitro(),
-    viteReact(),
-  ],
-});
+export default defineConfig(({ mode }) => {
+  const isTest = mode === "test" || Boolean(process.env.VITEST);
 
-export default config;
+  return {
+    ssr: {
+      external: ["better-sqlite3", "bindings"],
+    },
+    plugins: [
+      // this is the plugin that enables path aliases
+      viteTsConfigPaths({
+        projects: ["./tsconfig.json"],
+      }),
+      tailwindcss(),
+      tanstackStart(),
+      ...(isTest
+        ? []
+        : [
+            nitro({
+              config: {
+                noExternals: false,
+                externals: {
+                  external: ["better-sqlite3", "bindings"],
+                },
+              },
+            }),
+          ]),
+      viteReact(),
+    ],
+  };
+});

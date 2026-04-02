@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-label="System architecture diagram">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .frame { fill: none; stroke: #e2e8f0; stroke-width: 2; }
+      .title { font: 800 34px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #0f172a; }
+      .subtitle { font: 500 16px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #475569; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .boxTitle { font: 800 16px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #0f172a; }
+      .boxText { font: 500 13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #334155; }
+      .pill { fill: #eff6ff; stroke: #93c5fd; stroke-width: 1.5; }
+      .pillText { font: 700 12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #1d4ed8; }
+      .arrow { stroke: #334155; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .arrowMuted { stroke: #94a3b8; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+    <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <marker id="arrowHeadMuted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="720" />
+  <rect class="frame" x="18" y="18" width="1164" height="684" rx="18" />
+
+  <text class="title" x="60" y="92">Architecture</text>
+  <text class="subtitle" x="60" y="122">Pages + server handlers, with SQLite persistence and Redis-backed background workers.</text>
+
+  <!-- Client -->
+  <g transform="translate(60,170)">
+    <rect class="box" x="0" y="0" width="300" height="200" rx="16" />
+    <text class="boxTitle" x="22" y="40">Client (Browser)</text>
+    <text class="boxText" x="22" y="70">React pages</text>
+    <rect class="pill" x="22" y="92" width="112" height="26" rx="13" />
+    <text class="pillText" x="36" y="110">/booking</text>
+    <rect class="pill" x="140" y="92" width="112" height="26" rx="13" />
+    <text class="pillText" x="154" y="110">/machines</text>
+    <rect class="pill" x="22" y="126" width="112" height="26" rx="13" />
+    <text class="pillText" x="36" y="144">/login</text>
+    <rect class="pill" x="140" y="126" width="112" height="26" rx="13" />
+    <text class="pillText" x="154" y="144">/demo/*</text>
+    <text class="boxText" x="22" y="178">Optional: floating chat widget (lazy)</text>
+  </g>
+
+  <!-- App server -->
+  <g transform="translate(420,170)">
+    <rect class="box" x="0" y="0" width="360" height="200" rx="16" />
+    <text class="boxTitle" x="22" y="40">Rapids App</text>
+    <text class="boxText" x="22" y="70">File-based routing</text>
+    <text class="boxText" x="22" y="92">Server handlers (API routes)</text>
+    <rect class="pill" x="22" y="118" width="148" height="26" rx="13" />
+    <text class="pillText" x="36" y="136">/api/bookings/*</text>
+    <rect class="pill" x="176" y="118" width="148" height="26" rx="13" />
+    <text class="pillText" x="190" y="136">/api/machines/*</text>
+    <rect class="pill" x="22" y="152" width="148" height="26" rx="13" />
+    <text class="pillText" x="36" y="170">/api/calendar/*</text>
+    <rect class="pill" x="176" y="152" width="148" height="26" rx="13" />
+    <text class="pillText" x="190" y="170">/api/queues/*</text>
+  </g>
+
+  <!-- Data stores -->
+	  <g transform="translate(850,170)">
+	    <rect class="box" x="0" y="0" width="320" height="92" rx="16" />
+	    <text class="boxTitle" x="22" y="40">SQLite</text>
+	    <text class="boxText" x="22" y="68">`data/booking.db` (servers, bookings, users)</text>
+	  </g>
+	
+	  <g transform="translate(850,278)">
+	    <rect class="box" x="0" y="0" width="320" height="92" rx="16" />
+	    <text class="boxTitle" x="22" y="40">Redis</text>
+	    <text class="boxText" x="22" y="68">BullMQ queues for background work</text>
+	  </g>
+
+  <!-- Workers -->
+	  <g transform="translate(420,414)">
+	    <rect class="box" x="0" y="0" width="360" height="208" rx="16" />
+	    <text class="boxTitle" x="22" y="40">Worker Processes</text>
+	    <text class="boxText" x="22" y="70">Fast / slow queues + DLQ</text>
+	    <rect class="pill" x="22" y="96" width="160" height="26" rx="13" />
+	    <text class="pillText" x="36" y="114">bun run worker:fast</text>
+	    <rect class="pill" x="190" y="96" width="160" height="26" rx="13" />
+	    <text class="pillText" x="204" y="114">bun run worker:slow</text>
+	    <rect class="pill" x="22" y="130" width="160" height="26" rx="13" />
+	    <text class="pillText" x="36" y="148">bun run worker:perm</text>
+	    <text class="boxText" x="22" y="182">Exec adapters: SSH / IPMI / MATS (where configured)</text>
+	  </g>
+
+  <!-- External systems -->
+	  <g transform="translate(850,414)">
+	    <rect class="box" x="0" y="0" width="320" height="208" rx="16" />
+	    <text class="boxTitle" x="22" y="40">External Systems</text>
+	    <text class="boxText" x="22" y="70">Automation targets and infra tools</text>
+	    <rect class="pill" x="22" y="96" width="132" height="26" rx="13" />
+	    <text class="pillText" x="36" y="114">Ansible</text>
+    <rect class="pill" x="160" y="96" width="132" height="26" rx="13" />
+    <text class="pillText" x="174" y="114">SSH</text>
+    <rect class="pill" x="22" y="130" width="132" height="26" rx="13" />
+    <text class="pillText" x="36" y="148">IPMI</text>
+    <rect class="pill" x="160" y="130" width="132" height="26" rx="13" />
+    <text class="pillText" x="174" y="148">LDAP</text>
+    <text class="boxText" x="22" y="184">Used by API routes and workers as needed</text>
+  </g>
+
+  <!-- Scripts -->
+	  <g transform="translate(60,414)">
+	    <rect class="box" x="0" y="0" width="300" height="208" rx="16" />
+	    <text class="boxTitle" x="22" y="40">Repo Utilities</text>
+	    <text class="boxText" x="22" y="70">Seed and maintenance helpers</text>
+	    <rect class="pill" x="22" y="96" width="240" height="26" rx="13" />
+	    <text class="pillText" x="36" y="114">bun run seed:machines</text>
+	    <rect class="pill" x="22" y="130" width="240" height="26" rx="13" />
+	    <text class="pillText" x="36" y="148">bun run generate:ansible</text>
+	    <rect class="pill" x="22" y="164" width="240" height="26" rx="13" />
+	    <text class="pillText" x="36" y="182">bun run setup:all</text>
+	  </g>
+
+  <!-- Arrows -->
+  <path class="arrow" marker-end="url(#arrowHead)" d="M360 270H420" />
+	  <path class="arrow" marker-end="url(#arrowHead)" d="M780 224H850" />
+	  <path class="arrow" marker-end="url(#arrowHead)" d="M780 320H850" />
+	  <path class="arrow" marker-end="url(#arrowHead)" d="M600 370V414" />
+	  <path class="arrowMuted" marker-end="url(#arrowHeadMuted)" d="M780 518H850" />
+	  <path class="arrowMuted" marker-end="url(#arrowHeadMuted)" d="M850 518H780" />
+
+	  <!-- Labels for arrows -->
+	  <text class="boxText" x="382" y="256">HTTP</text>
+	  <text class="boxText" x="842" y="210" text-anchor="end">SQL</text>
+	  <text class="boxText" x="842" y="306" text-anchor="end">enqueue / poll</text>
+	  <text class="boxText" x="610" y="400">jobs</text>
+	  <text class="boxText" x="842" y="502" text-anchor="end">exec</text>
+	</svg>
