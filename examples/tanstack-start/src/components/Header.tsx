@@ -3,9 +3,11 @@ import { Link, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import {
   Calendar,
+  Home,
   LogOut,
   Menu,
   Settings,
+  SquareFunction,
   X,
 } from 'lucide-react'
 import { getCurrentUser, logout, isAdmin, type User } from '../utils/auth'
@@ -34,7 +36,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="p-4 flex items-center justify-between bg-gray-800 text-white shadow-lg flex-shrink-0">
+      <header className="p-4 flex items-center justify-between bg-gray-800 text-white shadow-lg">
         <div className="flex items-center">
           <button
             onClick={() => setIsOpen(true)}

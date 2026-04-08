@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { Calendar, dateFnsLocalizer, SlotInfo, Event as BigCalendarEvent, View } from 'react-big-calendar'
 import { format, parse, startOfWeek as dateFnsStartOfWeek, getDay as dateFnsGetDay } from 'date-fns'
-import { Clock, User as UserIcon, X, Calendar as CalendarIcon } from 'lucide-react'
+import { Clock, User as UserIcon, X } from 'lucide-react'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
 interface Machine {
@@ -52,7 +52,6 @@ interface CalendarEvent extends BigCalendarEvent {
   title: string
   start: Date
   end: Date
-  allDay?: boolean
   resource: {
     booking: Booking | null
     isCurrentUser: boolean
@@ -66,7 +65,6 @@ interface BookingDialogState {
   isOpen: boolean
   start: Date | null
   end: Date | null
-  allDay: boolean
 }
 
 interface BookingDetailDialogState {
@@ -100,34 +98,15 @@ const formatDateTime = (date: Date, type: 'full' | 'time' | 'short') => {
   } else if (type === 'time') {
     const hours = date.getHours()
     const minutes = date.getMinutes()
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+    const ampm = hours >= 12 ? 'PM' : 'AM'
+    const displayHours = hours === 0 ? 0 : (hours % 12 || 12)
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`
   } else {
     return new Intl.DateTimeFormat('en-US', { 
       month: 'short', 
       day: 'numeric' 
     }).format(date)
   }
-}
-
-// Round a date up to the next 30-minute boundary
-const roundToNext30Min = (date: Date): Date => {
-  const ms = 30 * 60 * 1000
-  return new Date(Math.ceil(date.getTime() / ms) * ms)
-}
-
-// Format a Date as a YYYY-MM-DD string for <input type="date">
-const toDateInputValue = (date: Date): string => {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-')
-}
-
-// Detect whether a booking occupies a full day (00:00 start, 23:59+ end)
-const isAllDayEvent = (start: Date, end: Date): boolean => {
-  return start.getHours() === 0 && start.getMinutes() === 0 &&
-         end.getHours() === 23 && end.getMinutes() >= 59
 }
 
 const localizer = dateFnsLocalizer({
@@ -161,8 +140,7 @@ export default function MachineBookingCalendar({
   const [bookingDialog, setBookingDialog] = useState<BookingDialogState>({
     isOpen: false,
     start: null,
-    end: null,
-    allDay: false,
+    end: null
   })
 
   const [bookingDetailDialog, setBookingDetailDialog] = useState<BookingDetailDialogState>({
@@ -183,14 +161,12 @@ export default function MachineBookingCalendar({
       // 新增：判断是否正在删除
       const isDeleting = booking.id === deletingBookingId
 
-      const startDate = new Date(booking.startTime)
-      const endDate = new Date(booking.endTime)
       return {
         id: booking.id,
+        // 如果正在删除，修改标题
         title: isDeleting ? 'Deleting...' : booking.userName,
-        start: startDate,
-        end: endDate,
-        allDay: isAllDayEvent(startDate, endDate),
+        start: new Date(booking.startTime),
+        end: new Date(booking.endTime),
         resource: {
           booking,
           isCurrentUser: currentUserId ? booking.userId === currentUserId : false,
@@ -203,11 +179,10 @@ export default function MachineBookingCalendar({
     if (pendingBooking) {
       bookingEvents.push({
         id: 'pending-booking',
-        title: pendingBooking.status === 'loading' ? '⏳ Booking...' :
+        title: pendingBooking.status === 'loading' ? '⏳ Booking...' : 
                pendingBooking.status === 'error' ? '❌ Failed' : '✓ Booked',
         start: pendingBooking.start,
         end: pendingBooking.end,
-        allDay: isAllDayEvent(pendingBooking.start, pendingBooking.end),
         resource: {
           booking: null,
           isCurrentUser: true,
@@ -234,16 +209,16 @@ export default function MachineBookingCalendar({
     }
     
     const now = new Date()
-    if (slotInfo.end < now) {
-      alert('Cannot book time slots that have already ended')
+    const half_hour_ago = new Date(now.getTime() - 30 * 60 * 1000)
+    if (slotInfo.start < half_hour_ago) {
+      alert('Cannot book past time slots')
       return
     }
-
+    
     setBookingDialog({
       isOpen: true,
       start: slotInfo.start,
-      end: slotInfo.end,
-      allDay: false,
+      end: slotInfo.end
     })
   }, [machine.status, currentUser])
 
@@ -257,38 +232,47 @@ export default function MachineBookingCalendar({
 
   // Create a new booking
   const handleCreateBooking = async () => {
-    if (!bookingDialog.start || !bookingDialog.end) return
+    if (bookingDialog.start && bookingDialog.end) {
+      // 关闭对话框
+      const start = bookingDialog.start
+      const end = bookingDialog.end
+      setBookingDialog({ isOpen: false, start: null, end: null })
+      
+      // 设置 pending 状态
+      setPendingBooking({
+        start,
+        end,
+        status: 'loading'
+      })
 
-    let start = bookingDialog.start
-    let end = bookingDialog.end
-
-    if (bookingDialog.allDay) {
-      // Ensure times are exactly 00:00 and 23:59:59 on their respective dates
-      start = new Date(bookingDialog.start)
-      start.setHours(0, 0, 0, 0)
-      end = new Date(bookingDialog.end)
-      end.setHours(23, 59, 59, 999)
-    } else {
-      // Non-all-day: if start is in the past, snap forward to next 30-min boundary
-      const now = new Date()
-      if (start < now) {
-        start = roundToNext30Min(now)
+      try {
+        // 调用父组件的预订函数（需要修改为返回 Promise）
+        await onBooking(machine.id, start, end)
+        
+        // 成功后短暂显示成功状态，然后清除（因为真实预订会加载进来）
+        setPendingBooking({
+          start,
+          end,
+          status: 'success'
+        })
+        
+        // 1秒后清除 pending 状态
+        setTimeout(() => {
+          setPendingBooking(null)
+        }, 1000)
+      } catch (error) {
+        // 显示错误状态
+        setPendingBooking({
+          start,
+          end,
+          status: 'error'
+        })
+        
+        // 3秒后清除错误状态
+        setTimeout(() => {
+          setPendingBooking(null)
+        }, 3000)
       }
-    }
-
-    // Close dialog immediately
-    setBookingDialog({ isOpen: false, start: null, end: null, allDay: false })
-
-    // Set pending state
-    setPendingBooking({ start, end, status: 'loading' })
-
-    try {
-      onBooking(machine.id, start, end)
-      setPendingBooking({ start, end, status: 'success' })
-      setTimeout(() => setPendingBooking(null), 1000)
-    } catch (error) {
-      setPendingBooking({ start, end, status: 'error' })
-      setTimeout(() => setPendingBooking(null), 3000)
     }
   }
 
@@ -397,7 +381,7 @@ export default function MachineBookingCalendar({
 
   // Custom event component
   const EventComponent = ({ event }: { event: CalendarEvent }) => {
-    const { isPending, pendingStatus, isDeleting } = event.resource
+    const { booking, isCurrentUser, isPending, pendingStatus, isDeleting } = event.resource
 
     // deleting状态显示
     if (isDeleting) {
@@ -437,13 +421,15 @@ export default function MachineBookingCalendar({
   // Prevent selecting non-available machines
   const slotPropGetter = useCallback((date: Date) => {
     const now = new Date()
-    const isPast = date < now
+    const half_hour_ago = new Date(now.getTime() - 30 * 60 * 1000)
+    const isPast = date < half_hour_ago
     
     if (isPast || machine.status !== 'available') {
       return {
         className: 'rbc-off-range-bg',
         style: {
           backgroundColor: 'rgba(31, 41, 55, 0.5)',
+          cursor: 'not-allowed'
         }
       }
     }
@@ -452,7 +438,7 @@ export default function MachineBookingCalendar({
   }, [machine.status])
 
     return (
-    <div className="bg-gray-800/50 backdrop-blur-lg rounded-lg border border-gray-700 h-full flex flex-col">
+    <div className="bg-gray-800/50 backdrop-blur-lg rounded-lg border border-gray-700 h-full">
       {/* Header - 更紧凑，单行 */}
       <div className="px-3 py-2 border-b border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -485,8 +471,8 @@ export default function MachineBookingCalendar({
       </div>
 
       {/* Calendar - 最大化高度 */}
-      <div className="p-2 flex-1 min-h-0 overflow-hidden">
-        <div className="bg-white rounded-lg overflow-hidden" style={{ height: '100%' }}>
+      <div className="p-2">
+        <div className="bg-white rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 130px)', minHeight: '600px' }}>
           <Calendar
             localizer={localizer}
             events={events}
@@ -506,16 +492,17 @@ export default function MachineBookingCalendar({
             components={{
               event: EventComponent,
             }}
-            min={new Date(0, 0, 0, 7, 0, 0)}
-            max={new Date(0, 0, 0, 23, 0, 0)}
-            scrollToTime={new Date(0, 0, 0, 8, 0, 0)}
+            min={new Date(0, 0, 0, 0, 0, 0)}
+            max={new Date(0, 0, 0, 23, 59, 59)}
             step={30}
             timeslots={2}
             formats={{
               timeGutterFormat: (date: Date) => {
                 const hours = date.getHours()
                 const minutes = date.getMinutes()
-                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+                const ampm = hours >= 12 ? 'PM' : 'AM'
+                const displayHours = hours === 0 ? 0 : (hours % 12 || 12)
+                return `${displayHours}:${minutes.toString().padStart(2, '0')} ${ampm}`
               },
               eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) => {
                 return `${formatDateTime(start, 'time')} - ${formatDateTime(end, 'time')}`
@@ -550,7 +537,7 @@ export default function MachineBookingCalendar({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-white">Create Booking</h3>
               <button
-                onClick={() => setBookingDialog({ isOpen: false, start: null, end: null, allDay: false })}
+                onClick={() => setBookingDialog({ isOpen: false, start: null, end: null })}
                 className="p-1 hover:bg-gray-700 rounded transition-colors"
               >
                 <X size={20} className="text-gray-400" />
@@ -558,104 +545,43 @@ export default function MachineBookingCalendar({
             </div>
 
             <div className="space-y-4">
-              {/* Machine name */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Machine</label>
                 <div className="text-white font-semibold">{machine.name}</div>
               </div>
 
-              {/* All Day toggle */}
-              <div className="flex items-center justify-between bg-gray-700/30 rounded-lg p-3">
-                <label className="text-sm font-medium text-gray-300">All Day</label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!bookingDialog.allDay) {
-                      const start = new Date(bookingDialog.start || new Date())
-                      start.setHours(0, 0, 0, 0)
-                      const end = new Date(start)
-                      end.setHours(23, 59, 59, 999)
-                      setBookingDialog(prev => ({ ...prev, allDay: true, start, end }))
-                    } else {
-                      const now = new Date()
-                      const rawStart = bookingDialog.start || now
-                      const start = rawStart > now ? rawStart : roundToNext30Min(now)
-                      const end = new Date(start.getTime() + 60 * 60 * 1000)
-                      setBookingDialog(prev => ({ ...prev, allDay: false, start, end }))
-                    }
-                  }}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${bookingDialog.allDay ? 'bg-cyan-600' : 'bg-gray-600'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${bookingDialog.allDay ? 'translate-x-5' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
               {bookingDialog.start && bookingDialog.end && (
-                bookingDialog.allDay ? (
-                  /* All Day: date-only pickers */
-                  <div className="space-y-4">
-                    <div>
-                      <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
-                        <CalendarIcon size={14} className="text-cyan-400" />
-                        Start Date
-                      </label>
-                      <input
-                        type="date"
-                        value={toDateInputValue(bookingDialog.start)}
-                        onChange={(e) => {
-                          if (!e.target.value) return
-                          const start = new Date(e.target.value + 'T00:00:00')
-                          const end = bookingDialog.end && start <= bookingDialog.end
-                            ? bookingDialog.end
-                            : new Date(e.target.value + 'T23:59:59.999')
-                          setBookingDialog(prev => ({ ...prev, start, end }))
-                        }}
-                        className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
-                        <CalendarIcon size={14} className="text-cyan-400" />
-                        End Date
-                      </label>
-                      <input
-                        type="date"
-                        value={toDateInputValue(bookingDialog.end)}
-                        min={toDateInputValue(bookingDialog.start)}
-                        onChange={(e) => {
-                          if (!e.target.value) return
-                          const end = new Date(e.target.value + 'T23:59:59.999')
-                          setBookingDialog(prev => ({ ...prev, end }))
-                        }}
-                        className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  /* Timed: datetime-local pickers */
+                <>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">Start Time</label>
                       <input
                         type="datetime-local"
+                        // 处理时区偏移，确保显示本地时间
                         value={new Date(bookingDialog.start.getTime() - bookingDialog.start.getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                         onChange={(e) => {
                           if (!e.target.value) return
                           const newStart = new Date(e.target.value)
+                          
+                          // 如果新的开始时间晚于或等于结束时间，自动将结束时间推后1小时
                           let newEnd = bookingDialog.end
                           if (newEnd && newStart >= newEnd) {
                             newEnd = new Date(newStart.getTime() + 60 * 60 * 1000)
                           }
+                          
                           setBookingDialog(prev => ({ ...prev, start: newStart, end: newEnd }))
                         }}
                         className="w-full bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                       />
                     </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">End Time</label>
                       <input
                         type="datetime-local"
+                        // 处理时区偏移
                         value={new Date(bookingDialog.end.getTime() - bookingDialog.end.getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                        // 最小值限制为开始时间
                         min={new Date(bookingDialog.start.getTime() - bookingDialog.start.getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
                         onChange={(e) => {
                           if (!e.target.value) return
@@ -666,51 +592,28 @@ export default function MachineBookingCalendar({
                       />
                     </div>
                   </div>
-                )
-              )}
 
-              {/* Booking Summary */}
-              {bookingDialog.start && bookingDialog.end && (
-                <div className="bg-gray-700/50 rounded-lg p-4 border-l-4 border-cyan-500">
-                  <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
-                    <Clock size={16} />
-                    <span>Booking Summary</span>
+                  <div className="bg-gray-700/50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
+                      <Clock size={16} />
+                      <span>Booking Summary</span>
+                    </div>
+                    <div className="text-white">
+                      <div className="font-medium">{formatDateTime(bookingDialog.start, 'full')}</div>
+                      <div className="text-cyan-400 mt-1">
+                        {formatDateTime(bookingDialog.start, 'time')} → {formatDateTime(bookingDialog.end, 'time')}
+                      </div>
+                      <div className="text-sm text-gray-400 mt-1">
+                        Duration: {Math.round((bookingDialog.end.getTime() - bookingDialog.start.getTime()) / (1000 * 60 * 60) * 2) / 2} hour(s)
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-white">
-                    {bookingDialog.allDay ? (
-                      <>
-                        <div className="font-medium">{formatDateTime(bookingDialog.start, 'full')}</div>
-                        {bookingDialog.end.toDateString() !== bookingDialog.start.toDateString() && (
-                          <div className="text-cyan-400 mt-1">→ {formatDateTime(bookingDialog.end, 'full')}</div>
-                        )}
-                        <div className="text-sm text-gray-400 mt-1">
-                          Duration: {
-                            Math.round(
-                              (new Date(bookingDialog.end.getFullYear(), bookingDialog.end.getMonth(), bookingDialog.end.getDate()).getTime() -
-                               new Date(bookingDialog.start.getFullYear(), bookingDialog.start.getMonth(), bookingDialog.start.getDate()).getTime()
-                              ) / (1000 * 60 * 60 * 24)
-                            ) + 1
-                          } day(s) · All Day
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="font-medium">{formatDateTime(bookingDialog.start, 'full')}</div>
-                        <div className="text-cyan-400 mt-1">
-                          {formatDateTime(bookingDialog.start, 'time')} → {formatDateTime(bookingDialog.end, 'time')}
-                        </div>
-                        <div className="text-sm text-gray-400 mt-1">
-                          Duration: {Math.round((bookingDialog.end.getTime() - bookingDialog.start.getTime()) / (1000 * 60 * 60) * 2) / 2} hour(s)
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                </>
               )}
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setBookingDialog({ isOpen: false, start: null, end: null, allDay: false })}
+                  onClick={() => setBookingDialog({ isOpen: false, start: null, end: null })}
                   className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
                 >
                   Cancel
@@ -803,7 +706,7 @@ export default function MachineBookingCalendar({
         .rbc-time-header-content { border-left: 1px solid #e5e7eb; }
         .rbc-time-content { border-top: 1px solid #e5e7eb; }
         .rbc-day-slot .rbc-time-slot { border-top: 1px solid #f3f4f6; }
-        .rbc-time-slot { min-height: 20px; }
+        .rbc-time-slot { min-height: 25px; }
         .rbc-today { background-color: #ecfeff; }
         .rbc-current-time-indicator { background-color: #ef4444; height: 2px; }
         .rbc-event { padding: 4px 6px; cursor: pointer; }
@@ -820,10 +723,6 @@ export default function MachineBookingCalendar({
         .rbc-date-cell { padding: 8px; text-align: right; }
         .rbc-off-range { color: #9ca3af; }
         .rbc-off-range-bg { background-color: rgba(31, 41, 55, 0.5); }
-        /* All-day event strip styling */
-        .rbc-allday-cell { background-color: rgba(8, 145, 178, 0.05); border-bottom: 2px solid rgba(6, 182, 212, 0.2); }
-        .rbc-event.rbc-event-allday { border-radius: 4px; font-weight: 600; opacity: 0.9; }
-        .rbc-row-segment .rbc-event-content { font-size: 12px; }
       `}</style>
     </div>
   )

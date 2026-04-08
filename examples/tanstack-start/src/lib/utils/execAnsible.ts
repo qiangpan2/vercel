@@ -24,7 +24,7 @@ export async function executeAnsible(
   return new Promise((resolve) => {
     //const inventoryPath = process.env.ANSIBLE_INVENTORY_PATH || './ansible/inventory/hosts.yml'
     const playbookPath = getAnsiblePath(`playbooks/${playbookName}`)
-    const inventoryPath = getAnsiblePath('inventory/hosts.yml')
+    const inventoryPath = '/mnt/data/vercel/ansible/inventory/hosts.yml'
 
     const args = ['-i', inventoryPath, playbookPath,]
     

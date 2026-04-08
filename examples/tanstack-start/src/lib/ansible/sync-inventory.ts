@@ -97,7 +97,9 @@ function generateInventoryYAML(): string {
 export function syncInventory(): { success: boolean; message: string; serverCount: number } {
   try {
     const projectRoot = getProjectRoot()
-    const outputPath = path.join(projectRoot, 'ansible/inventory/hosts.yml')
+    // const outputPath = path.join(projectRoot, 'ansible/inventory/hosts.yml')
+    const outputPath = '/mnt/data/vercel/ansible/inventory/hosts.yml'
+
     console.log(`[Inventory] Syncing inventory to ${outputPath}...`)
     // 确保目录存在
     const outputDir = path.dirname(outputPath)

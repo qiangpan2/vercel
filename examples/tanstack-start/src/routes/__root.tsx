@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 
 import Header from "../components/Header"
 import ChatWidgetLoader from "../components/ChatWidgetLoader"
+import Header from '../components/Header'
 
 import appCss from "../styles.css?url"
 
@@ -19,7 +20,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'CSE System helper',
+        title: 'RAPID',
       },
     ],
     links: [
@@ -44,7 +45,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="h-screen flex flex-col overflow-hidden">
+      <body>
         <Header />
         <div className="flex-1 min-h-0 overflow-hidden">
           {children}
@@ -52,6 +53,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {/* Floating AI chat bubble — only renders in the browser when a user is logged in */}
         <ChatWidgetLoader />
         <Devtools />
+        {children}
+        <TanStackDevtools
+          config={{
+            position: 'bottom-right',
+          }}
+          plugins={[
+            {
+              name: 'Tanstack Router',
+              render: <TanStackRouterDevtoolsPanel />,
+            },
+          ]}
+        />
         <Scripts />
       </body>
     </html>
