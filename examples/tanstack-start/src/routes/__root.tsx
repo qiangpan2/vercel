@@ -5,7 +5,6 @@ import { useEffect, useState } from "react"
 
 import Header from "../components/Header"
 import ChatWidgetLoader from "../components/ChatWidgetLoader"
-import Header from '../components/Header'
 
 import appCss from "../styles.css?url"
 
@@ -53,18 +52,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {/* Floating AI chat bubble — only renders in the browser when a user is logged in */}
         <ChatWidgetLoader />
         <Devtools />
-        {children}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
         <Scripts />
       </body>
     </html>

@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 import { authenticateWithLDAP, getUserByNtid, normalizeNtid } from './ldap_auth';
-=======
-import { authenticateWithLDAP, getUserByNtid } from './ldap_auth';
 import db from '../db/booking';
->>>>>>> 93cafb05c (Sync update, mainly user management and bugfix.)
 import type { User } from '../db/booking';
 
 // 重新导出 User 类型供外部使用
@@ -73,12 +69,9 @@ function checkUserApproval(ntid: string): void {
  * 使用 LDAP 进行身份验证
  */
 export async function login(ntid: string, password: string): Promise<AuthUser> {
-<<<<<<< HEAD
   const normalizedNtid = normalizeNtid(ntid);
-=======
   const isLocalAccount = ntid === 'coresw';
 
->>>>>>> 93cafb05c (Sync update, mainly user management and bugfix.)
   // test 模式下自动通过认证
   const testMode = process.env.AUTH_TEST_MODE === 'true';
   console.log('[Auth] Login attempt for NTID:', normalizedNtid, 'Test mode:', testMode);

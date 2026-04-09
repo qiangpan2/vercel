@@ -2,7 +2,8 @@ import path from "node:path"
 import Database from "better-sqlite3"
 import type { TaskAuditRecord, TaskEventPayload } from "./task-model"
 
-const dbPath = path.join(process.cwd(), "data", "booking.db")
+//const dbPath = path.join(process.cwd(), "data", "booking.db")
+const dbPath = '/mnt/data/vercel/task-audit.db'
 const db = new Database(dbPath)
 
 const initJobs = `

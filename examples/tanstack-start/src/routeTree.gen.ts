@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UsersRouteImport } from './routes/users'
 import { Route as MachinesRouteImport } from './routes/machines'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HelpRouteImport } from './routes/help'
@@ -18,12 +19,19 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo/start.server-funcs'
 import { Route as DemoStartApiRequestRouteImport } from './routes/demo/start.api-request'
 import { Route as DemoApiNamesRouteImport } from './routes/demo/api.names'
+import { Route as ApiUsersUpdateStatusRouteImport } from './routes/api/users/update-status'
+import { Route as ApiUsersSetAdminRouteImport } from './routes/api/users/set-admin'
+import { Route as ApiUsersListRouteImport } from './routes/api/users/list'
 import { Route as ApiQueuesStatusRouteImport } from './routes/api/queues/status'
 import { Route as ApiQueuesJobsRouteImport } from './routes/api/queues/jobs'
 import { Route as ApiQueuesControlRouteImport } from './routes/api/queues/control'
 import { Route as ApiMachinesUpdateRouteImport } from './routes/api/machines/update'
 import { Route as ApiMachinesListRouteImport } from './routes/api/machines/list'
+import { Route as ApiMachinesExclusiveUsersRouteImport } from './routes/api/machines/exclusive-users'
 import { Route as ApiMachinesDeleteRouteImport } from './routes/api/machines/delete'
+import { Route as ApiCalendarMachinesRouteImport } from './routes/api/calendar/machines'
+import { Route as ApiCalendarEventsRouteImport } from './routes/api/calendar/events'
+import { Route as ApiCalendarAvailabilityRouteImport } from './routes/api/calendar/availability'
 import { Route as ApiBookingsListRouteImport } from './routes/api/bookings/list'
 import { Route as ApiBookingsDeleteRouteImport } from './routes/api/bookings/delete'
 import { Route as ApiBookingsCreateRouteImport } from './routes/api/bookings/create'
@@ -37,6 +45,11 @@ import { Route as DemoStartSsrSpaModeRouteImport } from './routes/demo/start.ssr
 import { Route as DemoStartSsrFullSsrRouteImport } from './routes/demo/start.ssr.full-ssr'
 import { Route as DemoStartSsrDataOnlyRouteImport } from './routes/demo/start.ssr.data-only'
 
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MachinesRoute = MachinesRouteImport.update({
   id: '/machines',
   path: '/machines',
@@ -82,6 +95,21 @@ const DemoApiNamesRoute = DemoApiNamesRouteImport.update({
   path: '/demo/api/names',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUsersUpdateStatusRoute = ApiUsersUpdateStatusRouteImport.update({
+  id: '/api/users/update-status',
+  path: '/api/users/update-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUsersSetAdminRoute = ApiUsersSetAdminRouteImport.update({
+  id: '/api/users/set-admin',
+  path: '/api/users/set-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUsersListRoute = ApiUsersListRouteImport.update({
+  id: '/api/users/list',
+  path: '/api/users/list',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiQueuesStatusRoute = ApiQueuesStatusRouteImport.update({
   id: '/api/queues/status',
   path: '/api/queues/status',
@@ -107,9 +135,30 @@ const ApiMachinesListRoute = ApiMachinesListRouteImport.update({
   path: '/api/machines/list',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMachinesExclusiveUsersRoute =
+  ApiMachinesExclusiveUsersRouteImport.update({
+    id: '/api/machines/exclusive-users',
+    path: '/api/machines/exclusive-users',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiMachinesDeleteRoute = ApiMachinesDeleteRouteImport.update({
   id: '/api/machines/delete',
   path: '/api/machines/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCalendarMachinesRoute = ApiCalendarMachinesRouteImport.update({
+  id: '/api/calendar/machines',
+  path: '/api/calendar/machines',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCalendarEventsRoute = ApiCalendarEventsRouteImport.update({
+  id: '/api/calendar/events',
+  path: '/api/calendar/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCalendarAvailabilityRoute = ApiCalendarAvailabilityRouteImport.update({
+  id: '/api/calendar/availability',
+  path: '/api/calendar/availability',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBookingsListRoute = ApiBookingsListRouteImport.update({
@@ -180,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
   '/machines': typeof MachinesRoute
+  '/users': typeof UsersRoute
   '/api/ansible/execute': typeof ApiAnsibleExecuteRoute
   '/api/ansible/health-check': typeof ApiAnsibleHealthCheckRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -188,12 +238,19 @@ export interface FileRoutesByFullPath {
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
+  '/api/calendar/events': typeof ApiCalendarEventsRoute
+  '/api/calendar/machines': typeof ApiCalendarMachinesRoute
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
+  '/api/machines/exclusive-users': typeof ApiMachinesExclusiveUsersRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
   '/api/queues/control': typeof ApiQueuesControlRoute
   '/api/queues/jobs': typeof ApiQueuesJobsRoute
   '/api/queues/status': typeof ApiQueuesStatusRoute
+  '/api/users/list': typeof ApiUsersListRoute
+  '/api/users/set-admin': typeof ApiUsersSetAdminRoute
+  '/api/users/update-status': typeof ApiUsersUpdateStatusRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -209,6 +266,7 @@ export interface FileRoutesByTo {
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
   '/machines': typeof MachinesRoute
+  '/users': typeof UsersRoute
   '/api/ansible/execute': typeof ApiAnsibleExecuteRoute
   '/api/ansible/health-check': typeof ApiAnsibleHealthCheckRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -217,12 +275,19 @@ export interface FileRoutesByTo {
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
+  '/api/calendar/events': typeof ApiCalendarEventsRoute
+  '/api/calendar/machines': typeof ApiCalendarMachinesRoute
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
+  '/api/machines/exclusive-users': typeof ApiMachinesExclusiveUsersRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
   '/api/queues/control': typeof ApiQueuesControlRoute
   '/api/queues/jobs': typeof ApiQueuesJobsRoute
   '/api/queues/status': typeof ApiQueuesStatusRoute
+  '/api/users/list': typeof ApiUsersListRoute
+  '/api/users/set-admin': typeof ApiUsersSetAdminRoute
+  '/api/users/update-status': typeof ApiUsersUpdateStatusRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -239,6 +304,7 @@ export interface FileRoutesById {
   '/help': typeof HelpRoute
   '/login': typeof LoginRoute
   '/machines': typeof MachinesRoute
+  '/users': typeof UsersRoute
   '/api/ansible/execute': typeof ApiAnsibleExecuteRoute
   '/api/ansible/health-check': typeof ApiAnsibleHealthCheckRoute
   '/api/auth/login': typeof ApiAuthLoginRoute
@@ -247,12 +313,19 @@ export interface FileRoutesById {
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
+  '/api/calendar/events': typeof ApiCalendarEventsRoute
+  '/api/calendar/machines': typeof ApiCalendarMachinesRoute
   '/api/machines/delete': typeof ApiMachinesDeleteRoute
+  '/api/machines/exclusive-users': typeof ApiMachinesExclusiveUsersRoute
   '/api/machines/list': typeof ApiMachinesListRoute
   '/api/machines/update': typeof ApiMachinesUpdateRoute
   '/api/queues/control': typeof ApiQueuesControlRoute
   '/api/queues/jobs': typeof ApiQueuesJobsRoute
   '/api/queues/status': typeof ApiQueuesStatusRoute
+  '/api/users/list': typeof ApiUsersListRoute
+  '/api/users/set-admin': typeof ApiUsersSetAdminRoute
+  '/api/users/update-status': typeof ApiUsersUpdateStatusRoute
   '/demo/api/names': typeof DemoApiNamesRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
@@ -270,6 +343,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/login'
     | '/machines'
+    | '/users'
     | '/api/ansible/execute'
     | '/api/ansible/health-check'
     | '/api/auth/login'
@@ -278,12 +352,19 @@ export interface FileRouteTypes {
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/calendar/availability'
+    | '/api/calendar/events'
+    | '/api/calendar/machines'
     | '/api/machines/delete'
+    | '/api/machines/exclusive-users'
     | '/api/machines/list'
     | '/api/machines/update'
     | '/api/queues/control'
     | '/api/queues/jobs'
     | '/api/queues/status'
+    | '/api/users/list'
+    | '/api/users/set-admin'
+    | '/api/users/update-status'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -299,6 +380,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/login'
     | '/machines'
+    | '/users'
     | '/api/ansible/execute'
     | '/api/ansible/health-check'
     | '/api/auth/login'
@@ -307,12 +389,19 @@ export interface FileRouteTypes {
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/calendar/availability'
+    | '/api/calendar/events'
+    | '/api/calendar/machines'
     | '/api/machines/delete'
+    | '/api/machines/exclusive-users'
     | '/api/machines/list'
     | '/api/machines/update'
     | '/api/queues/control'
     | '/api/queues/jobs'
     | '/api/queues/status'
+    | '/api/users/list'
+    | '/api/users/set-admin'
+    | '/api/users/update-status'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -328,6 +417,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/login'
     | '/machines'
+    | '/users'
     | '/api/ansible/execute'
     | '/api/ansible/health-check'
     | '/api/auth/login'
@@ -336,12 +426,19 @@ export interface FileRouteTypes {
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/calendar/availability'
+    | '/api/calendar/events'
+    | '/api/calendar/machines'
     | '/api/machines/delete'
+    | '/api/machines/exclusive-users'
     | '/api/machines/list'
     | '/api/machines/update'
     | '/api/queues/control'
     | '/api/queues/jobs'
     | '/api/queues/status'
+    | '/api/users/list'
+    | '/api/users/set-admin'
+    | '/api/users/update-status'
     | '/demo/api/names'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
@@ -358,6 +455,7 @@ export interface RootRouteChildren {
   HelpRoute: typeof HelpRoute
   LoginRoute: typeof LoginRoute
   MachinesRoute: typeof MachinesRoute
+  UsersRoute: typeof UsersRoute
   ApiAnsibleExecuteRoute: typeof ApiAnsibleExecuteRoute
   ApiAnsibleHealthCheckRoute: typeof ApiAnsibleHealthCheckRoute
   ApiAuthLoginRoute: typeof ApiAuthLoginRoute
@@ -366,12 +464,19 @@ export interface RootRouteChildren {
   ApiBookingsCreateRoute: typeof ApiBookingsCreateRoute
   ApiBookingsDeleteRoute: typeof ApiBookingsDeleteRoute
   ApiBookingsListRoute: typeof ApiBookingsListRoute
+  ApiCalendarAvailabilityRoute: typeof ApiCalendarAvailabilityRoute
+  ApiCalendarEventsRoute: typeof ApiCalendarEventsRoute
+  ApiCalendarMachinesRoute: typeof ApiCalendarMachinesRoute
   ApiMachinesDeleteRoute: typeof ApiMachinesDeleteRoute
+  ApiMachinesExclusiveUsersRoute: typeof ApiMachinesExclusiveUsersRoute
   ApiMachinesListRoute: typeof ApiMachinesListRoute
   ApiMachinesUpdateRoute: typeof ApiMachinesUpdateRoute
   ApiQueuesControlRoute: typeof ApiQueuesControlRoute
   ApiQueuesJobsRoute: typeof ApiQueuesJobsRoute
   ApiQueuesStatusRoute: typeof ApiQueuesStatusRoute
+  ApiUsersListRoute: typeof ApiUsersListRoute
+  ApiUsersSetAdminRoute: typeof ApiUsersSetAdminRoute
+  ApiUsersUpdateStatusRoute: typeof ApiUsersUpdateStatusRoute
   DemoApiNamesRoute: typeof DemoApiNamesRoute
   DemoStartApiRequestRoute: typeof DemoStartApiRequestRoute
   DemoStartServerFuncsRoute: typeof DemoStartServerFuncsRoute
@@ -383,6 +488,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/machines': {
       id: '/machines'
       path: '/machines'
@@ -446,6 +558,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoApiNamesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/users/update-status': {
+      id: '/api/users/update-status'
+      path: '/api/users/update-status'
+      fullPath: '/api/users/update-status'
+      preLoaderRoute: typeof ApiUsersUpdateStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/users/set-admin': {
+      id: '/api/users/set-admin'
+      path: '/api/users/set-admin'
+      fullPath: '/api/users/set-admin'
+      preLoaderRoute: typeof ApiUsersSetAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/users/list': {
+      id: '/api/users/list'
+      path: '/api/users/list'
+      fullPath: '/api/users/list'
+      preLoaderRoute: typeof ApiUsersListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/queues/status': {
       id: '/api/queues/status'
       path: '/api/queues/status'
@@ -481,11 +614,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMachinesListRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/machines/exclusive-users': {
+      id: '/api/machines/exclusive-users'
+      path: '/api/machines/exclusive-users'
+      fullPath: '/api/machines/exclusive-users'
+      preLoaderRoute: typeof ApiMachinesExclusiveUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/machines/delete': {
       id: '/api/machines/delete'
       path: '/api/machines/delete'
       fullPath: '/api/machines/delete'
       preLoaderRoute: typeof ApiMachinesDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/machines': {
+      id: '/api/calendar/machines'
+      path: '/api/calendar/machines'
+      fullPath: '/api/calendar/machines'
+      preLoaderRoute: typeof ApiCalendarMachinesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/events': {
+      id: '/api/calendar/events'
+      path: '/api/calendar/events'
+      fullPath: '/api/calendar/events'
+      preLoaderRoute: typeof ApiCalendarEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/availability': {
+      id: '/api/calendar/availability'
+      path: '/api/calendar/availability'
+      fullPath: '/api/calendar/availability'
+      preLoaderRoute: typeof ApiCalendarAvailabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bookings/list': {
@@ -582,6 +743,7 @@ const rootRouteChildren: RootRouteChildren = {
   HelpRoute: HelpRoute,
   LoginRoute: LoginRoute,
   MachinesRoute: MachinesRoute,
+  UsersRoute: UsersRoute,
   ApiAnsibleExecuteRoute: ApiAnsibleExecuteRoute,
   ApiAnsibleHealthCheckRoute: ApiAnsibleHealthCheckRoute,
   ApiAuthLoginRoute: ApiAuthLoginRoute,
@@ -590,12 +752,19 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBookingsCreateRoute: ApiBookingsCreateRoute,
   ApiBookingsDeleteRoute: ApiBookingsDeleteRoute,
   ApiBookingsListRoute: ApiBookingsListRoute,
+  ApiCalendarAvailabilityRoute: ApiCalendarAvailabilityRoute,
+  ApiCalendarEventsRoute: ApiCalendarEventsRoute,
+  ApiCalendarMachinesRoute: ApiCalendarMachinesRoute,
   ApiMachinesDeleteRoute: ApiMachinesDeleteRoute,
+  ApiMachinesExclusiveUsersRoute: ApiMachinesExclusiveUsersRoute,
   ApiMachinesListRoute: ApiMachinesListRoute,
   ApiMachinesUpdateRoute: ApiMachinesUpdateRoute,
   ApiQueuesControlRoute: ApiQueuesControlRoute,
   ApiQueuesJobsRoute: ApiQueuesJobsRoute,
   ApiQueuesStatusRoute: ApiQueuesStatusRoute,
+  ApiUsersListRoute: ApiUsersListRoute,
+  ApiUsersSetAdminRoute: ApiUsersSetAdminRoute,
+  ApiUsersUpdateStatusRoute: ApiUsersUpdateStatusRoute,
   DemoApiNamesRoute: DemoApiNamesRoute,
   DemoStartApiRequestRoute: DemoStartApiRequestRoute,
   DemoStartServerFuncsRoute: DemoStartServerFuncsRoute,
