@@ -1,6 +1,6 @@
 // /**
 //  * 从 machines.json 生成 Ansible inventory
-//  * 运行: pnpm generate:ansible
+//  * 运行: bun run generate:ansible
 //  */
 
 // import fs from 'fs'
@@ -24,7 +24,7 @@
 //   yaml += '#\n'
 //   yaml += '# To update this file:\n'
 //   yaml += '#   1. Edit scripts/machines.json\n'
-//   yaml += '#   2. Run: pnpm generate:ansible\n\n'
+//   yaml += '#   2. Run: bun run generate:ansible\n\n'
   
 //   yaml += 'all:\n'
 //   yaml += '  children:\n'
@@ -66,12 +66,12 @@
 //   console.log(`   - ${machine.name} (${machine.ansible.host})`)
 // }
 
-// console.log('\n💡 Next step: Run "pnpm seed:machines" to update Redis')
+// console.log('\n💡 Next step: Run "bun run seed:machines" to update Redis')
 
 
 /**
  * 从 SQLite 数据库生成 Ansible inventory
- * 运行: pnpm generate:ansible
+ * 运行: bun run generate:ansible
  */
 
 import fs from 'fs'
@@ -132,7 +132,7 @@ function generateYAML(servers: ServerRecord[]): string {
   yaml += `# Total servers: ${servers.length}\n`
   yaml += '#\n'
   yaml += '# To regenerate this file:\n'
-  yaml += '#   Run: pnpm generate:ansible\n'
+  yaml += '#   Run: bun run generate:ansible\n'
   yaml += '#\n'
   yaml += '# To update server data:\n'
   yaml += '#   Use the web UI at /machines\n\n'

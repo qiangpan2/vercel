@@ -140,6 +140,32 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bookings_ntid ON bookings(ntid);
   CREATE INDEX IF NOT EXISTS idx_bookings_time ON bookings(start_time, end_time);
 
+  -- Hermes chat: one current conversation per user + transcript rows
+  CREATE TABLE IF NOT EXISTS chat_conversations (
+    conversation_id TEXT PRIMARY KEY,
+    ntid TEXT NOT NULL,
+    hermes_session_id TEXT,
+    is_current INTEGER NOT NULL DEFAULT 1 CHECK (is_current IN (0, 1)),
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ntid) REFERENCES users(ntid)
+  );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_current_per_user
+    ON chat_conversations(ntid) WHERE is_current = 1;
+
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (conversation_id) REFERENCES chat_conversations(conversation_id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation
+    ON chat_messages(conversation_id, created_at, id);
+
 `);
 
 export default db;

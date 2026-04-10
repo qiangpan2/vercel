@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Install dependencies
-pnpm install
+# Install dependencies (Bun)
+bun install
 
 # Start Redis
 docker run -d \
@@ -15,4 +15,4 @@ docker run -d \
 until docker exec redis redis-cli ping | grep -q PONG; do sleep 1; done
 
 # Start development server
-pnpm dev
+bun run dev

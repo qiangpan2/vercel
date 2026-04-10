@@ -1,19 +1,32 @@
-Welcome to your new TanStack app! 
+Welcome to your new TanStack app!
+
+This example uses [Bun](https://bun.sh) for dependency installs and `package.json` scripts (`bun install`, `bun run dev`, `bun run test`).
 
 # Features
 
 This application includes:
 - 📊 **CI Dashboard** - Real-time CI/CD pipeline monitoring
 - 📅 **Machine Booking** - Interactive calendar for server resource scheduling
+- 💬 **AI chat** - Floating assistant backed by a Hermes-compatible API (see below)
 - 🚀 **TanStack Start** demos and examples
+
+### Hermes chat setup
+
+The chat widget calls same-origin routes `GET /api/chat/history`, `POST /api/chat/send` (SSE), and `POST /api/chat/reset`. The server forwards to Hermes using **server-only** environment variables (copy from `.env.example`):
+
+- `HERMES_API_BASE_URL` — e.g. `http://127.0.0.1:8642/v1` (include any API prefix your gateway expects)
+- `HERMES_API_KEY` — Bearer token sent to Hermes
+- `HERMES_MODEL` — optional; defaults to `hermes-agent`
+
+Per-user transcripts and Hermes session continuity (`X-Hermes-Session-Id`) are stored in the app SQLite database; users are isolated by LDAP session (`rapid_session` cookie).
 
 # Getting Started
 
 To run this application:
 
 ```bash
-pnpm install
-pnpm dev
+bun install
+bun run dev
 ```
 
 Then visit:
@@ -25,7 +38,7 @@ Then visit:
 To build this application for production:
 
 ```bash
-pnpm build
+bun run build
 ```
 
 ## Testing
@@ -33,7 +46,7 @@ pnpm build
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
 
 ```bash
-pnpm test
+bun run test
 ```
 
 ## Styling
@@ -145,7 +158,7 @@ React-Query is an excellent addition or alternative to route loading and integra
 First add your dependencies:
 
 ```bash
-pnpm add @tanstack/react-query @tanstack/react-query-devtools
+bun add @tanstack/react-query @tanstack/react-query-devtools
 ```
 
 Next we'll need to create a query client and provider. We recommend putting those in `main.tsx`.
@@ -226,7 +239,7 @@ Another common requirement for React applications is state management. There are
 First you need to add TanStack Store as a dependency:
 
 ```bash
-pnpm add @tanstack/store
+bun add @tanstack/store
 ```
 
 Now let's create a simple counter in the `src/App.tsx` file as a demonstration.

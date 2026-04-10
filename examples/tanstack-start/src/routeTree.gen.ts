@@ -27,6 +27,9 @@ import { Route as ApiCalendarAvailabilityRouteImport } from './routes/api/calend
 import { Route as ApiBookingsListRouteImport } from './routes/api/bookings/list'
 import { Route as ApiBookingsDeleteRouteImport } from './routes/api/bookings/delete'
 import { Route as ApiBookingsCreateRouteImport } from './routes/api/bookings/create'
+import { Route as ApiChatHistoryRouteImport } from './routes/api/chat/history'
+import { Route as ApiChatResetRouteImport } from './routes/api/chat/reset'
+import { Route as ApiChatSendRouteImport } from './routes/api/chat/send'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
@@ -127,6 +130,21 @@ const ApiBookingsCreateRoute = ApiBookingsCreateRouteImport.update({
   path: '/api/bookings/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatHistoryRoute = ApiChatHistoryRouteImport.update({
+  id: '/api/chat/history',
+  path: '/api/chat/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatResetRoute = ApiChatResetRouteImport.update({
+  id: '/api/chat/reset',
+  path: '/api/chat/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatSendRoute = ApiChatSendRouteImport.update({
+  id: '/api/chat/send',
+  path: '/api/chat/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthMeRoute = ApiAuthMeRouteImport.update({
   id: '/api/auth/me',
   path: '/api/auth/me',
@@ -188,6 +206,9 @@ export interface FileRoutesByFullPath {
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/chat/history': typeof ApiChatHistoryRoute
+  '/api/chat/reset': typeof ApiChatResetRoute
+  '/api/chat/send': typeof ApiChatSendRoute
   '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
   '/api/calendar/events': typeof ApiCalendarEventsRoute
   '/api/calendar/machines': typeof ApiCalendarMachinesRoute
@@ -217,6 +238,9 @@ export interface FileRoutesByTo {
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/chat/history': typeof ApiChatHistoryRoute
+  '/api/chat/reset': typeof ApiChatResetRoute
+  '/api/chat/send': typeof ApiChatSendRoute
   '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
   '/api/calendar/events': typeof ApiCalendarEventsRoute
   '/api/calendar/machines': typeof ApiCalendarMachinesRoute
@@ -247,6 +271,9 @@ export interface FileRoutesById {
   '/api/bookings/create': typeof ApiBookingsCreateRoute
   '/api/bookings/delete': typeof ApiBookingsDeleteRoute
   '/api/bookings/list': typeof ApiBookingsListRoute
+  '/api/chat/history': typeof ApiChatHistoryRoute
+  '/api/chat/reset': typeof ApiChatResetRoute
+  '/api/chat/send': typeof ApiChatSendRoute
   '/api/calendar/availability': typeof ApiCalendarAvailabilityRoute
   '/api/calendar/events': typeof ApiCalendarEventsRoute
   '/api/calendar/machines': typeof ApiCalendarMachinesRoute
@@ -278,6 +305,9 @@ export interface FileRouteTypes {
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/chat/history'
+    | '/api/chat/reset'
+    | '/api/chat/send'
     | '/api/calendar/availability'
     | '/api/calendar/events'
     | '/api/calendar/machines'
@@ -307,6 +337,9 @@ export interface FileRouteTypes {
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/chat/history'
+    | '/api/chat/reset'
+    | '/api/chat/send'
     | '/api/calendar/availability'
     | '/api/calendar/events'
     | '/api/calendar/machines'
@@ -336,6 +369,9 @@ export interface FileRouteTypes {
     | '/api/bookings/create'
     | '/api/bookings/delete'
     | '/api/bookings/list'
+    | '/api/chat/history'
+    | '/api/chat/reset'
+    | '/api/chat/send'
     | '/api/calendar/availability'
     | '/api/calendar/events'
     | '/api/calendar/machines'
@@ -366,6 +402,9 @@ export interface RootRouteChildren {
   ApiBookingsCreateRoute: typeof ApiBookingsCreateRoute
   ApiBookingsDeleteRoute: typeof ApiBookingsDeleteRoute
   ApiBookingsListRoute: typeof ApiBookingsListRoute
+  ApiChatHistoryRoute: typeof ApiChatHistoryRoute
+  ApiChatResetRoute: typeof ApiChatResetRoute
+  ApiChatSendRoute: typeof ApiChatSendRoute
   ApiCalendarAvailabilityRoute: typeof ApiCalendarAvailabilityRoute
   ApiCalendarEventsRoute: typeof ApiCalendarEventsRoute
   ApiCalendarMachinesRoute: typeof ApiCalendarMachinesRoute
@@ -509,6 +548,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBookingsCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat/history': {
+      id: '/api/chat/history'
+      path: '/api/chat/history'
+      fullPath: '/api/chat/history'
+      preLoaderRoute: typeof ApiChatHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat/reset': {
+      id: '/api/chat/reset'
+      path: '/api/chat/reset'
+      fullPath: '/api/chat/reset'
+      preLoaderRoute: typeof ApiChatResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat/send': {
+      id: '/api/chat/send'
+      path: '/api/chat/send'
+      fullPath: '/api/chat/send'
+      preLoaderRoute: typeof ApiChatSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/me': {
       id: '/api/auth/me'
       path: '/api/auth/me'
@@ -590,6 +650,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBookingsCreateRoute: ApiBookingsCreateRoute,
   ApiBookingsDeleteRoute: ApiBookingsDeleteRoute,
   ApiBookingsListRoute: ApiBookingsListRoute,
+  ApiChatHistoryRoute: ApiChatHistoryRoute,
+  ApiChatResetRoute: ApiChatResetRoute,
+  ApiChatSendRoute: ApiChatSendRoute,
   ApiCalendarAvailabilityRoute: ApiCalendarAvailabilityRoute,
   ApiCalendarEventsRoute: ApiCalendarEventsRoute,
   ApiCalendarMachinesRoute: ApiCalendarMachinesRoute,

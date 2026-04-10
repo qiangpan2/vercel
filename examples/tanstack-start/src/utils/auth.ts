@@ -47,6 +47,13 @@ export function canBook(user: User | null): boolean {
   return user?.role === 'developer' || user?.role === 'admin';
 }
 
+/** Clear cached user from localStorage only (no server call). Use when the server session is already gone but the client still has stale data. */
+export function clearStoredUser(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('user')
+  }
+}
+
 // 登出
 export function logout(): void {
   if (typeof window !== 'undefined') {

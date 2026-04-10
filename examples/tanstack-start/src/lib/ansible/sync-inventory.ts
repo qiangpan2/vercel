@@ -50,7 +50,7 @@ function generateInventoryYAML(): string {
   yaml += `# Total servers: ${servers.length}\n`
   yaml += '#\n'
   yaml += '# This file is automatically updated when servers are modified via the web UI.\n'
-  yaml += '# Manual regeneration: pnpm generate:ansible\n\n'
+  yaml += '# Manual regeneration: bun run generate:ansible\n\n'
 
   yaml += 'all:\n'
   yaml += '  children:\n'

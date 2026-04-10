@@ -1,19 +1,22 @@
 /**
- * ChatWidget — floating chat bubble for OpenClaw AI Agent.
+ * ChatWidget — floating chat bubble backed by the app Hermes proxy (/api/chat/*).
  *
  * Renders a fixed-position bubble in the bottom-right corner of every page.
- * Clicking the bubble opens a chat panel backed by the OpenClaw Gateway
- * WebSocket (see src/lib/chat/useGateway.ts).
+ * Uses the logged-in session cookie; transcript is stored per user in SQLite.
  *
- * Only rendered on the client (the Gateway WebSocket and localStorage auth
- * are browser-only APIs).
+ * Only rendered on the client after GET /api/auth/me confirms a session (avoids stale localStorage vs cookie mismatch).
  */
 
 import { useState, useRef, useEffect, type KeyboardEvent, type FormEvent } from 'react'
-import { useGateway, type UseGatewayReturn } from '../lib/chat/useGateway'
-import { getCurrentUser } from '../utils/auth'
-import { MessageSquare, X, Send, Loader2, AlertCircle, WifiOff } from 'lucide-react'
-import type { GatewayMessage } from '../lib/chat/gateway-client'
+import { useHermesChat, type UseHermesChatReturn } from '../lib/chat/useHermesChat'
+import { clearStoredUser, getCurrentUser } from '../utils/auth'
+import { MessageSquare, X, Send, Loader2, AlertCircle, WifiOff, RotateCcw } from 'lucide-react'
+import type { ChatMessage } from '../lib/chat/chat-types'
+import {
+  isExternalChatMarkdownHref,
+  isSafeChatMarkdownHref,
+  isSafeChatMarkdownImgSrc,
+} from '../lib/chat/markdown-link-safety'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -44,6 +47,13 @@ const MARKDOWN_COMPONENTS = {
     )
   },
   img({ src, alt }: any) {
+    if (!isSafeChatMarkdownImgSrc(src)) {
+      return (
+        <span className="text-gray-400 text-xs italic" title="Image URL not allowed">
+          [image omitted]
+        </span>
+      )
+    }
     return (
       <img
         src={src}
@@ -85,7 +95,19 @@ const MARKDOWN_COMPONENTS = {
     return <h6 className="font-medium text-gray-400 text-xs mb-1 mt-1">{children}</h6>
   },
   a({ href, children }: any) {
-    return <a href={href} className="text-cyan-400 underline" target="_blank" rel="noopener noreferrer">{children}</a>
+    if (!isSafeChatMarkdownHref(href)) {
+      return <span className="text-gray-300">{children}</span>
+    }
+    const isExternal = isExternalChatMarkdownHref(String(href))
+    return (
+      <a
+        href={href}
+        className="text-cyan-400 underline"
+        {...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+      >
+        {children}
+      </a>
+    )
   },
   blockquote({ children }: any) {
     return <blockquote className="border-l-2 border-cyan-500 pl-3 text-gray-400 italic my-2">{children}</blockquote>
@@ -122,7 +144,7 @@ function MarkdownMessage({ content }: { content: string }) {
 // --- MessageList -----------------------------------------------------------
 
 interface MessageListProps {
-  messages: GatewayMessage[]
+  messages: ChatMessage[]
   stream: string | null
 }
 
@@ -134,7 +156,7 @@ function MessageList({ messages, stream }: MessageListProps) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, stream])
 
-  function extractText(msg: GatewayMessage): string {
+  function extractText(msg: ChatMessage): string {
     return msg.content
       .filter((c) => c.type === 'text')
       .map((c) => c.text)
@@ -240,12 +262,12 @@ function InputBar({ onSend, disabled }: InputBarProps) {
 // --- ChatPanel ------------------------------------------------------------
 
 interface ChatPanelProps {
-  gateway: UseGatewayReturn
+  chat: UseHermesChatReturn
   onClose: () => void
 }
 
-function ChatPanel({ gateway, onClose }: ChatPanelProps) {
-  const { connected, messages, stream, sendMessage, error } = gateway
+function ChatPanel({ chat, onClose }: ChatPanelProps) {
+  const { connected, messages, stream, sendMessage, error, resetChat } = chat
   const [sendError, setSendError] = useState<string | null>(null)
   const [size, setSize] = useState({ width: 384, height: 512 })
   const dragRef = useRef<{ type: 'width' | 'height'; startX: number; startY: number; startW: number; startH: number } | null>(null)
@@ -306,6 +328,15 @@ function ChatPanel({ gateway, onClose }: ChatPanelProps) {
     }
   }
 
+  async function handleReset() {
+    setSendError(null)
+    try {
+      await resetChat()
+    } catch (e) {
+      setSendError((e as Error).message)
+    }
+  }
+
   return (
     <div
       className="flex flex-col bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden relative"
@@ -333,13 +364,25 @@ function ChatPanel({ gateway, onClose }: ChatPanelProps) {
             </span>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
-          aria-label="Close chat"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => void handleReset()}
+            disabled={stream !== null}
+            className="p-1 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white disabled:opacity-40"
+            title="Start a new conversation"
+            aria-label="Reset conversation"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
+            aria-label="Close chat"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Status banners */}
@@ -398,30 +441,66 @@ function ChatBubble({ isOpen, hasUnread, onClick }: ChatBubbleProps) {
 
 /**
  * Drop-in floating chat widget.  Mount once in __root.tsx; it renders nothing
- * on the server (window guard) and only when a user is logged in.
+ * on the server (window guard) and only when the server reports an active session.
  */
 export default function ChatWidget() {
-  // Guard: do not mount on server or if not logged in
   if (typeof window === 'undefined') return null
-  const user = getCurrentUser()
-  if (!user) return null
-
-  return <ChatWidgetInner />
+  return <ChatWidgetGate />
 }
 
-function ChatWidgetInner() {
-  const gateway = useGateway()
+type AuthGate = 'checking' | 'in' | 'out'
+
+function ChatWidgetGate() {
+  const [gate, setGate] = useState<AuthGate>('checking')
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' })
+        const data = (await res.json()) as { user?: unknown }
+        if (cancelled) return
+        if (data.user) {
+          setGate('in')
+          return
+        }
+        if (getCurrentUser()) {
+          clearStoredUser()
+        }
+        setGate('out')
+      } catch {
+        if (!cancelled) setGate('out')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (gate === 'checking' || gate === 'out') return null
+  return (
+    <ChatWidgetInner
+      onAuthLost={() => {
+        clearStoredUser()
+        setGate('out')
+      }}
+    />
+  )
+}
+
+function ChatWidgetInner({ onAuthLost }: { onAuthLost: () => void }) {
+  const chat = useHermesChat({ onUnauthorized: onAuthLost })
   const [isOpen, setIsOpen] = useState(false)
   // Track unread: increment when a final message arrives while panel is closed
   const [unreadCount, setUnreadCount] = useState(0)
   const prevMsgLen = useRef(0)
 
   useEffect(() => {
-    if (!isOpen && gateway.messages.length > prevMsgLen.current) {
-      setUnreadCount((c) => c + gateway.messages.length - prevMsgLen.current)
+    if (!isOpen && chat.messages.length > prevMsgLen.current) {
+      setUnreadCount((c) => c + chat.messages.length - prevMsgLen.current)
     }
-    prevMsgLen.current = gateway.messages.length
-  }, [gateway.messages.length, isOpen])
+    prevMsgLen.current = chat.messages.length
+  }, [chat.messages.length, isOpen])
 
   function handleOpen() {
     setIsOpen(true)
@@ -434,7 +513,7 @@ function ChatWidgetInner() {
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-      {isOpen && <ChatPanel gateway={gateway} onClose={handleClose} />}
+      {isOpen && <ChatPanel chat={chat} onClose={handleClose} />}
       <ChatBubble
         isOpen={isOpen}
         hasUnread={unreadCount > 0}
